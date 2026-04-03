@@ -1,4 +1,4 @@
-.PHONY: all build test clean setup
+.PHONY: all build test clean setup run
 
 # ── Setup ──────────────────────────────────────────
 setup:
@@ -6,7 +6,8 @@ setup:
 	cd macmd-core && cargo fetch
 
 # ── Build ──────────────────────────────────────────
-build: build-rust build-editor build-app
+build:
+	./scripts/build.sh
 
 build-rust:
 	cd macmd-core && cargo build --release
@@ -14,9 +15,12 @@ build-rust:
 build-editor:
 	cd macmd-editor && npm run build
 
-build-app:
-	cd macmd-app && xcodegen generate
-	xcodebuild build -project macmd-app/macmd.xcodeproj -scheme macmd -configuration Debug
+# ── Run ────────────────────────────────────────────
+run: build
+	open build/macmd.app
+
+run-with-demo: build
+	open build/macmd.app --args "$(PWD)/test-files/demo.md"
 
 # ── Test ───────────────────────────────────────────
 test: test-rust test-editor
@@ -41,4 +45,4 @@ bench:
 clean:
 	cd macmd-core && cargo clean
 	cd macmd-editor && rm -rf node_modules dist
-	rm -rf macmd-app/macmd.xcodeproj
+	rm -rf build/
