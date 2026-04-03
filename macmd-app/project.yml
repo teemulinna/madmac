@@ -1,0 +1,46 @@
+name: macmd
+options:
+  minimumXcodeGenVersion: "2.38"
+  deploymentTarget:
+    macOS: "14.0"
+  xcodeVersion: "16.0"
+  defaultConfig: Debug
+
+settings:
+  base:
+    PRODUCT_BUNDLE_IDENTIFIER: com.macmd.app
+    PRODUCT_NAME: macmd
+    SWIFT_VERSION: "6.0"
+    MACOSX_DEPLOYMENT_TARGET: "14.0"
+
+targets:
+  macmd:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources
+        type: group
+    resources:
+      - path: Resources
+        type: group
+    info:
+      path: Info.plist
+    settings:
+      base:
+        INFOPLIST_FILE: macmd-app/Info.plist
+        CODE_SIGN_STYLE: Automatic
+        ENABLE_HARDENED_RUNTIME: true
+        COMBINE_HIDPI_IMAGES: true
+
+  macmdTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: ../macmd-tests/swift-tests
+        type: group
+    dependencies:
+      - target: macmd
+    settings:
+      base:
+        BUNDLE_LOADER: "$(TEST_HOST)"
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/macmd.app/Contents/MacOS/macmd"

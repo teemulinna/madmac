@@ -8,6 +8,17 @@
 
 # Node
 node_modules/
+dist/
+package-lock.json
+
+# Rust
+macmd-core/target/
+
+# Xcode
+*.xcodeproj
+*.xcworkspace
+build/
+DerivedData/
 
 # Environment
 .env

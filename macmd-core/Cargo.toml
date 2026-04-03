@@ -1,0 +1,24 @@
+[package]
+name = "macmd-core"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+description = "Core library for macmd — markdown parsing, diagram rendering, caching"
+
+[lib]
+name = "macmd_core"
+crate-type = ["staticlib", "lib"]
+
+[dependencies]
+# Markdown parsing (streaming, for real-time)
+pulldown-cmark = { version = "0.12", features = ["simd"] }
+# Markdown parsing (AST, for export)
+comrak = { version = "0.28", default-features = false, features = ["shortcodes"] }
+
+[dev-dependencies]
+proptest = "1"
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "markdown_bench"
+harness = false
