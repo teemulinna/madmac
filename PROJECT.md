@@ -19,6 +19,29 @@ Typora-level inline WYSIWYG + 100% Mermaid + 28 diagram languages + zero config*
 
 ---
 
+## Design Decisions (Grill-Me Review)
+
+All decisions resolved through systematic design-tree review:
+
+| # | Decision | Choice | Rationale |
+|---|----------|--------|-----------|
+| 1 | **Target user** | Everyone who opens .md in Finder; deeper for devs | Finder default = universal first impression, power features for technical users |
+| 2 | **Reader vs editor first** | Adaptive: Finder→Reading Mode, internal→Fluid Mode | Cmd+E toggles. "Magic moment": click rendered heading → animated edit transition |
+| 3 | **Diagram offline strategy** | Native WASM (Mermaid, PlantUML, Graphviz, Pikchr, SvgBob, D2) + Kroki Phase 3+ | PlantUML priority. Install size may grow. No mandatory internet dependency |
+| 4 | **FFI chain (JS↔Swift↔Rust)** | Keep Swift intermediary, don't bypass | <10ms roundtrip. Debounce dwarfs FFI overhead. Swift controls cache + QuickLook |
+| 5 | **Long document performance** | Lazy decorations + IntersectionObserver | CM6 virtualizes text. We lazy-load diagram widgets. Measure at 10K lines + 50 diagrams |
+| 6 | **File saving** | macOS native NSDocument autosave + versions | Zero config. File → Revert To. Crash recovery. Cmd+S forces immediate save |
+| 7 | **Image storage** | Configurable, default `./assets/` | Relative paths always. De facto standard (Typora, Obsidian). Zero config for 90% |
+| 8 | **File encoding** | UTF-8 only | Error on non-UTF-8. Simple. No mojibake edge cases to handle |
+| 9 | **Distribution** | Direct download (DMG) + Homebrew Cask | No sandbox restrictions. Notarized with Apple Developer ID. No App Store commission |
+| 10 | **License** | MIT | Max community. Competitive advantage is execution, not code secrecy |
+| 11 | **Which parser drives Fluid Mode** | CM6's @lezer/markdown | Lezer for real-time editing (<1ms incremental). pulldown-cmark only for export/search |
+| 12 | **Animated morph technique** | Height-transition + fade (Phase 1-2), FLIP (Phase 3+) | Smooth layout shift from day one. Pixel-perfect FLIP morph later |
+| 13 | **Mobile/iPad** | Keep door open, no extra work | Architecture is already layered (Rust portable, Swift thin shell). No abstraction layers |
+| 14 | **Phase 1 scope** | Split into Phase 1a (reader) + 1b (Fluid Mode) | 1a = useful product alone (best .md reader). 1b adds editing innovation |
+
+---
+
 ## Architecture
 
 ```
@@ -70,7 +93,7 @@ Typora-level inline WYSIWYG + 100% Mermaid + 28 diagram languages + zero config*
 | Swift shell + Rust core | Pure Rust (egui/GPUI) | Native macOS feel requires AppKit. Rust for computation, Swift for platform. |
 | swift-bridge FFI | UniFFI, cbindgen | Zero serialization overhead, macOS-only so no need for UniFFI's multi-language support. |
 | mmdr for Mermaid | mermaid.js only | 400-700x faster. Native Rust. No browser dependency for diagram rendering. |
-| pulldown-cmark (edit) + comrak (export) | Single parser | Streaming parser for real-time; AST parser for export transformations. |
+| @lezer/markdown (edit) + pulldown-cmark/comrak (export) | Single parser | Lezer for real-time CM6 decorations (<1ms). Rust parsers for export/search/diagram detection. |
 | Kroki for other diagrams | Individual integrations | One HTTP API covers PlantUML, D2, Graphviz, and 25+ more languages. |
 
 ---
@@ -214,50 +237,69 @@ These are the moments that make users fall in love:
 
 ## Development Phases
 
-### Phase 1: Foundation (MVP)
-> Goal: Open .md files, edit with Fluid Mode, render basic markdown
+### Phase 1a: Best .md Reader for macOS
+> Goal: Open .md from Finder, see beautifully rendered document
+> Approach: BDD/TDD — Gherkin scenarios first, then implementation
 
-- Swift/AppKit app shell with document-based architecture
-- CodeMirror 6 integration in WKWebView
-- Fluid Mode CM6 extension (basic: headings, bold, italic, links, images)
-- pulldown-cmark integration via swift-bridge
-- File open/save, recent files
-- UTType registration for .md files
-- Basic theme (light/dark following system)
+- Swift/AppKit document-based app (NSDocument with autosave + versions)
+- CodeMirror 6 in WKWebView with @lezer/markdown parser
+- **Reading Mode** as default (rendered view, no raw markdown visible)
+- Code blocks with syntax highlighting
+- Light/dark theme (system-following)
+- UTType registration (.md, .markdown) — Finder default app
+- File open/save/recent files
+- UTF-8 only (error on non-UTF-8)
+
+### Phase 1b: Fluid Mode v1
+> Goal: Innovative inline editing that makes users fall in love
+> Approach: BDD/TDD — Gherkin scenarios first, then implementation
+
+- `Cmd+E` toggle: Reading Mode ↔ Fluid Mode
+- Fluid Mode decorations: headings, bold, italic, links
+- Height-transition + fade animation (~200ms ease-out)
+- Inline image rendering (images displayed in-place)
+- Auto-pair markdown syntax (`**`, `[]`, etc.)
 
 ### Phase 2: Diagrams
 > Goal: First-class Mermaid + multi-language diagram support
 
-- mmdr Rust integration for native Mermaid rendering
-- Diagram Widget CM6 extension (render inline, click-to-edit)
-- Content-hash diagram caching
-- Kroki client for 28+ diagram languages
-- KaTeX math rendering
+- Rust core setup via swift-bridge
+- mmdr integration for native Mermaid rendering (2-6ms)
+- Diagram Widget CM6 extension (render inline, click-to-edit with live preview)
+- Content-hash diagram caching (disk-persistent)
+- Lazy diagram rendering (IntersectionObserver for off-screen)
+- PlantUML WASM rendering (priority Tier 2 language)
+- KaTeX math rendering (synchronous, no layout shift)
 - resvg for SVG→PNG export
 
-### Phase 3: Polish
+### Phase 3: Polish + WASM Diagrams
 > Goal: The features that make users fanatical
 
 - Fluid Mode advanced (tables, code blocks, footnotes, task lists)
+- FLIP animation upgrade for Fluid Mode transitions
 - Focus mode + typewriter mode
-- Smart paste, drag & drop images
-- Table visual editor (Tab navigation)
+- Smart paste (URL over selection → link), drag & drop images to ./assets/
+- Table visual editor (Tab navigation, auto-align)
 - Command palette (Cmd+Shift+P)
-- Outline sidebar
+- Outline sidebar (Cmd+Shift+O)
 - Export (PDF, HTML, DOCX via comrak + templates)
-- QuickLook extension
+- QuickLook extension (rendered preview in Finder)
 - Spotlight importer
+- Additional WASM renderers: Graphviz, Pikchr, SvgBob, D2
+- Kroki integration (opt-in, configurable server URL)
 
 ### Phase 4: Power Features
 > Goal: Compete with Obsidian's knowledge features
 
 - Multi-file support (sidebar file browser)
-- Full-text search across files
+- Full-text search across files (Rust-powered)
 - `[[wikilinks]]` with backlinks
 - Heading anchors and cross-file linking
 - Custom CSS themes
 - Vim keybindings (optional)
 - Extension API (CM6 extension loading)
+- Homebrew Cask distribution
+- DMG with notarization (Apple Developer ID)
 
 ---
 
