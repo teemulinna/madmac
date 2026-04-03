@@ -1,0 +1,14 @@
+# OS
+.DS_Store
+
+# Ruflo runtime data
+.claude-flow/data/
+.claude-flow/logs/
+.claude-flow/sessions/
+
+# Node
+node_modules/
+
+# Environment
+.env
+.env.*
