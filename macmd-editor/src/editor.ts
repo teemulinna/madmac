@@ -23,6 +23,7 @@ import {
   notifyModeChanged,
   notifyThemeChanged,
 } from "./bridge";
+import { fluidMode } from "./fluid-mode";
 
 export type EditorMode = "reading" | "fluid";
 
@@ -32,6 +33,7 @@ export type EditorMode = "reading" | "fluid";
 const editableCompartment = new Compartment();
 const readOnlyCompartment = new Compartment();
 const highlightCompartment = new Compartment();
+const fluidModeCompartment = new Compartment();
 
 let view: EditorView | null = null;
 let currentMode: EditorMode = "reading";
@@ -86,6 +88,7 @@ export function createEditor(
       EditorView.lineWrapping,
       editableCompartment.of(modeExts.editable),
       readOnlyCompartment.of(modeExts.readOnly),
+      fluidModeCompartment.of(mode === "fluid" ? fluidMode() : []),
       contentChangeNotifier(),
     ],
   });
@@ -126,6 +129,7 @@ export function setMode(mode: EditorMode): void {
     effects: [
       editableCompartment.reconfigure(modeExts.editable),
       readOnlyCompartment.reconfigure(modeExts.readOnly),
+      fluidModeCompartment.reconfigure(mode === "fluid" ? fluidMode() : []),
     ],
   });
 
