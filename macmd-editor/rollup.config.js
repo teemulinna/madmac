@@ -8,9 +8,16 @@ export default {
     format: "iife",
     name: "MacmdEditor",
     sourcemap: true,
+    inlineDynamicImports: true,
   },
   plugins: [
     resolve(),
-    typescript({ tsconfig: "./tsconfig.json" }),
+    typescript({
+      tsconfig: "./tsconfig.json",
+      compilerOptions: {
+        outDir: undefined,
+        declaration: false,
+      },
+    }),
   ],
 };

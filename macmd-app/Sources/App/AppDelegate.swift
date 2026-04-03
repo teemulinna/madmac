@@ -31,6 +31,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         fileMenu.addItem(withTitle: "New", action: #selector(NSDocumentController.newDocument(_:)), keyEquivalent: "n")
         fileMenu.addItem(withTitle: "Open…", action: #selector(NSDocumentController.openDocument(_:)), keyEquivalent: "o")
         fileMenu.addItem(.separator())
+        fileMenu.addItem(withTitle: "Close", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
+        fileMenu.addItem(.separator())
         fileMenu.addItem(withTitle: "Save", action: #selector(NSDocument.save(_:)), keyEquivalent: "s")
         fileMenu.addItem(withTitle: "Save As…", action: #selector(NSDocument.saveAs(_:)), keyEquivalent: "S")
         fileMenu.addItem(.separator())
@@ -61,6 +63,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let viewMenuItem = NSMenuItem()
         let viewMenu = NSMenu(title: "View")
         let toggleModeItem = NSMenuItem(title: "Toggle Edit Mode", action: #selector(MarkdownDocument.toggleMode(_:)), keyEquivalent: "e")
+        toggleModeItem.keyEquivalentModifierMask = [.command]
         viewMenu.addItem(toggleModeItem)
         viewMenuItem.submenu = viewMenu
         mainMenu.addItem(viewMenuItem)

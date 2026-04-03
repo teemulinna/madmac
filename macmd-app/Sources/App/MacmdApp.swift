@@ -6,6 +6,8 @@ struct MacmdApp {
         let app = NSApplication.shared
         let delegate = AppDelegate()
         app.delegate = delegate
+        // Ensure NSDocumentController is initialized for document-based app
+        _ = NSDocumentController.shared
         app.run()
     }
 }

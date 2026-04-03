@@ -4,6 +4,7 @@ import WebKit
 final class EditorViewController: NSViewController, WKScriptMessageHandler {
     private var webView: WKWebView!
     private var isFluidMode = false
+    private var appearanceObservation: NSKeyValueObservation?
     weak var document: MarkdownDocument?
 
     override func loadView() {
@@ -11,71 +12,96 @@ final class EditorViewController: NSViewController, WKScriptMessageHandler {
         let userContentController = WKUserContentController()
         userContentController.add(self, name: "macmd")
         config.userContentController = userContentController
+        // Allow file access for loading editor.js from the bundle
+        config.preferences.setValue(true, forKey: "allowFileAccessFromFileURLs")
 
         webView = WKWebView(frame: .zero, configuration: config)
         webView.setValue(false, forKey: "drawsBackground")
 
         view = webView
         loadEditorHTML()
+        observeAppearanceChanges()
     }
 
     // MARK: - Content
 
     func loadContent(_ content: String) {
-        let escaped = content
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "\"", with: "\\\"")
-            .replacingOccurrences(of: "\n", with: "\\n")
-            .replacingOccurrences(of: "\r", with: "")
+        let escaped = escapeForJavaScript(content)
         let js = "MacmdEditor.setContent(\"\(escaped)\");"
         webView.evaluateJavaScript(js)
-    }
-
-    func currentContent() -> String {
-        var result = ""
-        let semaphore = DispatchSemaphore(value: 0)
-        webView.evaluateJavaScript("MacmdEditor.getContent();") { value, _ in
-            result = value as? String ?? ""
-            semaphore.signal()
-        }
-        semaphore.wait()
-        return result
     }
 
     func toggleMode() {
         isFluidMode.toggle()
         let mode = isFluidMode ? "fluid" : "reading"
         webView.evaluateJavaScript("MacmdEditor.setMode('\(mode)');")
-        document?.undoManager?.removeAllActions()
+    }
+
+    // MARK: - Theme
+
+    private func observeAppearanceChanges() {
+        appearanceObservation = NSApp.observe(
+            \.effectiveAppearance,
+            options: [.new, .initial]
+        ) { [weak self] _, _ in
+            self?.updateTheme()
+        }
+    }
+
+    private func updateTheme() {
+        let appearance = view.effectiveAppearance
+        let isDark = appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+        let theme = isDark ? "dark" : "light"
+        webView.evaluateJavaScript("MacmdEditor.setTheme('\(theme)');")
     }
 
     // MARK: - WKScriptMessageHandler
 
-    func userContentController(
+    nonisolated func userContentController(
         _ userContentController: WKUserContentController,
         didReceive message: WKScriptMessage
     ) {
-        guard let body = message.body as? [String: Any],
-              let action = body["action"] as? String else { return }
+        // WKScriptMessageHandler delivers on the main thread, so we can
+        // safely assume main actor isolation for accessing our properties.
+        MainActor.assumeIsolated {
+            guard let body = message.body as? [String: Any],
+                  let action = body["action"] as? String else { return }
 
-        switch action {
-        case "contentChanged":
-            if let content = body["content"] as? String {
-                document?.content = content
-                document?.updateChangeCount(.changeDone)
+            switch action {
+            case "contentChanged":
+                if let content = body["content"] as? String {
+                    self.document?.content = content
+                    self.document?.updateChangeCount(.changeDone)
+                }
+            case "ready":
+                if let content = self.document?.content {
+                    self.loadContent(content)
+                }
+                self.updateTheme()
+            default:
+                break
             }
-        case "ready":
-            if let content = document?.content {
-                loadContent(content)
-            }
-        default:
-            break
         }
     }
 
     // MARK: - Private
 
+    private func escapeForJavaScript(_ string: String) -> String {
+        string
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+            .replacingOccurrences(of: "\n", with: "\\n")
+            .replacingOccurrences(of: "\r", with: "")
+            .replacingOccurrences(of: "\u{2028}", with: "\\u2028")
+            .replacingOccurrences(of: "\u{2029}", with: "\\u2029")
+    }
+
     private func loadEditorHTML() {
+        // Load editor.js from the bundle's editor/ subdirectory
+        guard let editorDir = Bundle.main.resourceURL?.appendingPathComponent("editor") else {
+            return
+        }
+
         let html = """
         <!DOCTYPE html>
         <html>
@@ -86,14 +112,21 @@ final class EditorViewController: NSViewController, WKScriptMessageHandler {
                 :root {
                     color-scheme: light dark;
                 }
-                body {
+                * {
                     margin: 0;
-                    padding: 24px 48px;
+                    padding: 0;
+                    box-sizing: border-box;
+                }
+                body {
                     font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
                     font-size: 16px;
                     line-height: 1.6;
+                }
+                #editor {
                     max-width: 720px;
                     margin: 0 auto;
+                    padding: 24px 48px;
+                    min-height: 100vh;
                 }
                 .cm-editor {
                     height: 100vh;
@@ -123,7 +156,7 @@ final class EditorViewController: NSViewController, WKScriptMessageHandler {
             <div id="editor"></div>
             <script src="editor.js"></script>
             <script>
-                const editor = MacmdEditor.createEditor(
+                MacmdEditor.createEditor(
                     document.getElementById('editor'),
                     '',
                     'reading'
@@ -133,6 +166,8 @@ final class EditorViewController: NSViewController, WKScriptMessageHandler {
         </body>
         </html>
         """
-        webView.loadHTMLString(html, baseURL: Bundle.main.resourceURL)
+
+        // Load with the editor directory as base URL so editor.js resolves
+        webView.loadHTMLString(html, baseURL: editorDir)
     }
 }

@@ -8,6 +8,8 @@ extension UTType {
 }
 
 final class MarkdownDocument: NSDocument {
+    /// The current markdown content. Updated from the editor via JS->Swift bridge
+    /// whenever the user makes changes (contentChanged message).
     var content: String = ""
     private var editorViewController: EditorViewController?
 
@@ -37,6 +39,7 @@ final class MarkdownDocument: NSDocument {
         window.center()
         window.setFrameAutosaveName("MarkdownEditor")
         window.minSize = NSSize(width: 400, height: 300)
+        window.title = displayName
 
         let windowController = NSWindowController(window: window)
         addWindowController(windowController)
@@ -52,7 +55,7 @@ final class MarkdownDocument: NSDocument {
             throw NSError(
                 domain: "com.macmd.error",
                 code: 1,
-                userInfo: [NSLocalizedDescriptionKey: "File is not valid UTF-8"]
+                userInfo: [NSLocalizedDescriptionKey: "File is not valid UTF-8 encoded. macmd only supports UTF-8 files."]
             )
         }
         content = text
@@ -62,9 +65,9 @@ final class MarkdownDocument: NSDocument {
     // MARK: - Writing
 
     override func data(ofType typeName: String) throws -> Data {
-        if let viewController = editorViewController {
-            content = viewController.currentContent()
-        }
+        // content is kept in sync via the JS->Swift contentChanged bridge message,
+        // so we always have the latest content without needing to synchronously
+        // query the WKWebView (which would deadlock on the main thread).
         guard let data = content.data(using: .utf8) else {
             throw NSError(
                 domain: "com.macmd.error",
