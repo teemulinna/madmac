@@ -34,6 +34,9 @@ test-editor:
 test-smoke:
 	./scripts/smoke-test.sh
 
+test-integration:
+	./scripts/integration-test.sh
+
 test-watch-rust:
 	cd macmd-core && cargo watch -x test
 
