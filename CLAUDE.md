@@ -14,21 +14,31 @@
 ## File Organization
 
 - NEVER save to root folder — use the directories below
-- Use `/src` for source code files
-- Use `/tests` for test files
-- Use `/docs` for documentation and markdown files
-- Use `/config` for configuration files
-- Use `/scripts` for utility scripts
-- Use `/examples` for example code
+- `macmd-app/` — Swift/AppKit application shell
+- `macmd-core/` — Rust core library (markdown, diagrams, cache, export)
+- `macmd-editor/` — CodeMirror 6 extensions (TypeScript)
+- `macmd-tests/` — Test suites (BDD features, Swift, Rust, TS tests)
 
 ## Project Architecture
 
-- Follow Domain-Driven Design with bounded contexts
+- **Hybrid Swift + Rust**: Swift/AppKit shell + Rust core via swift-bridge FFI
+- **Editor surface**: CodeMirror 6 in WKWebView (NOT TextKit 2)
+- **Fluid Mode**: Our inline WYSIWYG paradigm (CM6 decorations)
+- **Diagrams**: mmdr (Rust native Mermaid) + Kroki (28+ languages)
 - Keep files under 500 lines
 - Use typed interfaces for all public APIs
-- Prefer TDD London School (mock-first) for new code
-- Use event sourcing for state changes
+- BDD outside-in: Gherkin scenarios → TDD unit tests → implementation
 - Ensure input validation at system boundaries
+
+## Key Technical Decisions
+
+- NO Electron — native Swift/AppKit shell
+- NO TextKit 2 — CodeMirror 6 in WKWebView (proven by MarkEdit)
+- NO split panes — Fluid Mode inline WYSIWYG only
+- pulldown-cmark for streaming parse, comrak for export AST
+- KaTeX (not MathJax) for synchronous math rendering
+- swift-bridge (not UniFFI) for zero-overhead FFI
+- resvg for SVG rendering (5.6x faster than librsvg)
 
 ### Project Config
 
@@ -41,18 +51,31 @@
 ## Build & Test
 
 ```bash
-# Build
-npm run build
+# Rust core
+cd macmd-core && cargo build && cargo test
 
-# Test
-npm test
+# TypeScript CM6 extensions
+cd macmd-editor && npm run build && npx vitest run
 
-# Lint
-npm run lint
+# Swift app
+xcodebuild build -scheme macmd
+xcodebuild test -scheme macmd
+
+# BDD acceptance tests
+cd macmd-tests && npm run test:bdd
+
+# All tests
+make test
+
+# Watch modes (TDD)
+cargo watch -x test              # Rust
+npx vitest --watch               # TypeScript
 ```
 
 - ALWAYS run tests after making code changes
 - ALWAYS verify build succeeds before committing
+- ALWAYS write tests BEFORE implementation (BDD/TDD)
+- See TESTING.md for full testing strategy
 
 ## Security Rules
 
