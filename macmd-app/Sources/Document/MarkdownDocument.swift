@@ -7,6 +7,7 @@ extension UTType {
     }
 }
 
+@objc(MarkdownDocument)
 final class MarkdownDocument: NSDocument {
     /// The current markdown content. Updated from the editor via JS->Swift bridge
     /// whenever the user makes changes (contentChanged message).
