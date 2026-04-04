@@ -22,6 +22,8 @@
 			</array>
 		</dict>
 	</array>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
 	<key>CFBundleExecutable</key>
 	<string>macmd</string>
 	<key>CFBundleIdentifier</key>

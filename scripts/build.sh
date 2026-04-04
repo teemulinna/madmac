@@ -54,10 +54,9 @@ if [ -d "$PROJECT_ROOT/macmd-editor/node_modules/katex/dist/fonts" ]; then
     cp "$PROJECT_ROOT/macmd-editor/node_modules/katex/dist/fonts/"*.woff2 "$RESOURCES/editor/fonts/"
 fi
 
-# Copy asset catalog (if compiled)
-if [ -d "$PROJECT_ROOT/macmd-app/Resources/Assets.xcassets" ]; then
-    # For now, just ensure the directory exists
-    mkdir -p "$RESOURCES/Assets.xcassets"
+# Copy app icon
+if [ -f "$PROJECT_ROOT/macmd-app/Resources/AppIcon.icns" ]; then
+    cp "$PROJECT_ROOT/macmd-app/Resources/AppIcon.icns" "$RESOURCES/AppIcon.icns"
 fi
 
 # 4. Create PkgInfo
