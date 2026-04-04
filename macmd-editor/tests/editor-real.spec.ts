@@ -810,3 +810,217 @@ test.describe("8 - Large document performance", () => {
     expect(errors).toEqual([]);
   });
 });
+
+// ===========================================================================
+// PHASE 2 — RED TESTS (diagrams + math)
+// These tests define what Phase 2 must deliver.
+// They MUST fail until the feature is implemented.
+// ===========================================================================
+
+// ---------------------------------------------------------------------------
+// 9. Mermaid diagram rendering in real WebKit
+// ---------------------------------------------------------------------------
+test.describe("9 - Mermaid diagram rendering", () => {
+  test("mermaid code block renders as SVG", async ({ page }) => {
+    await setupPage(page);
+
+    await page.evaluate(() => {
+      (window as any).MacmdEditor.createEditor(
+        document.getElementById("editor")!,
+        '# Title\n\n```mermaid\ngraph TD\n  A[Start] --> B[End]\n```\n\nText after',
+        "reading",
+      );
+    });
+
+    // Wait for mermaid rendering (may need time for async render)
+    await page.waitForTimeout(1000);
+
+    // There should be an SVG element rendered from the mermaid code
+    const svgCount = await page.locator(".cm-editor svg").count();
+    expect(svgCount).toBeGreaterThan(0);
+  });
+
+  test("rendered mermaid SVG contains expected nodes", async ({ page }) => {
+    await setupPage(page);
+
+    await page.evaluate(() => {
+      (window as any).MacmdEditor.createEditor(
+        document.getElementById("editor")!,
+        '```mermaid\ngraph TD\n  A[Hello] --> B[World]\n```',
+        "reading",
+      );
+    });
+
+    await page.waitForTimeout(1000);
+
+    // The SVG should contain text nodes for "Hello" and "World"
+    const svgText = await page.evaluate(() => {
+      const svg = document.querySelector(".cm-editor svg");
+      return svg ? svg.textContent : null;
+    });
+    expect(svgText).not.toBeNull();
+    expect(svgText).toContain("Hello");
+    expect(svgText).toContain("World");
+  });
+
+  test("mermaid renders in under 500ms", async ({ page }) => {
+    await setupPage(page);
+
+    const startTime = Date.now();
+    await page.evaluate(() => {
+      (window as any).MacmdEditor.createEditor(
+        document.getElementById("editor")!,
+        '```mermaid\ngraph TD\n  A --> B\n  B --> C\n  C --> D\n```',
+        "reading",
+      );
+    });
+
+    // Poll for SVG appearance
+    await expect(page.locator(".cm-editor svg")).toBeVisible({ timeout: 500 });
+    const elapsed = Date.now() - startTime;
+    expect(elapsed).toBeLessThan(500);
+  });
+
+  test("mermaid syntax error shows graceful fallback", async ({ page }) => {
+    const errors: string[] = [];
+    page.on("pageerror", (err) => errors.push(err.message));
+
+    await setupPage(page);
+
+    await page.evaluate(() => {
+      (window as any).MacmdEditor.createEditor(
+        document.getElementById("editor")!,
+        '```mermaid\ngraph INVALID_SYNTAX ???\n```',
+        "reading",
+      );
+    });
+
+    await page.waitForTimeout(1000);
+
+    // App should not crash — either show error message or original code
+    const editorExists = await page.locator(".cm-editor").count();
+    expect(editorExists).toBe(1);
+    // No unhandled errors should have propagated
+    expect(errors.filter((e) => e.includes("mermaid"))).toEqual([]);
+  });
+
+  test("mermaid in fluid mode: click to edit source, see live preview", async ({
+    page,
+  }) => {
+    await setupPage(page);
+
+    await page.evaluate(() => {
+      (window as any).MacmdEditor.createEditor(
+        document.getElementById("editor")!,
+        '# Title\n\n```mermaid\ngraph TD\n  A --> B\n```\n\nText',
+        "fluid",
+      );
+    });
+
+    await page.waitForTimeout(1000);
+
+    // In rendered state: should see SVG, not raw code
+    const svgVisible = await page.locator(".cm-editor svg").count();
+    expect(svgVisible).toBeGreaterThan(0);
+
+    // Click on the diagram area to enter edit mode
+    const diagramArea = page.locator(".cm-editor svg").first();
+    await diagramArea.click();
+    await page.waitForTimeout(300);
+
+    // After clicking: should see mermaid source code
+    const editorContent = await page.evaluate(() =>
+      document.querySelector(".cm-editor")?.textContent,
+    );
+    expect(editorContent).toContain("graph TD");
+    expect(editorContent).toContain("A --> B");
+  });
+
+  test("multiple mermaid diagrams render independently", async ({ page }) => {
+    await setupPage(page);
+
+    await page.evaluate(() => {
+      (window as any).MacmdEditor.createEditor(
+        document.getElementById("editor")!,
+        '```mermaid\ngraph TD\n  A[First]\n```\n\nMiddle text\n\n```mermaid\ngraph LR\n  X[Second]\n```',
+        "reading",
+      );
+    });
+
+    await page.waitForTimeout(1500);
+
+    // Both diagrams should render as SVGs
+    const svgCount = await page.locator(".cm-editor svg").count();
+    expect(svgCount).toBeGreaterThanOrEqual(2);
+
+    // Both should contain their respective text
+    const allSvgText = await page.evaluate(() => {
+      const svgs = document.querySelectorAll(".cm-editor svg");
+      return Array.from(svgs).map((svg) => svg.textContent);
+    });
+    expect(allSvgText.some((t) => t?.includes("First"))).toBe(true);
+    expect(allSvgText.some((t) => t?.includes("Second"))).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 10. KaTeX math rendering in real WebKit
+// ---------------------------------------------------------------------------
+test.describe("10 - KaTeX math rendering", () => {
+  test("inline math $...$ renders as formatted equation", async ({ page }) => {
+    await setupPage(page);
+
+    await page.evaluate(() => {
+      (window as any).MacmdEditor.createEditor(
+        document.getElementById("editor")!,
+        "The equation $E = mc^2$ is famous.",
+        "reading",
+      );
+    });
+
+    await page.waitForTimeout(500);
+
+    // KaTeX should render the math as a .katex element
+    const katexCount = await page.locator(".katex").count();
+    expect(katexCount).toBeGreaterThan(0);
+  });
+
+  test("display math $$...$$ renders as block equation", async ({ page }) => {
+    await setupPage(page);
+
+    await page.evaluate(() => {
+      (window as any).MacmdEditor.createEditor(
+        document.getElementById("editor")!,
+        "Before\n\n$$\\int_0^\\infty e^{-x} dx = 1$$\n\nAfter",
+        "reading",
+      );
+    });
+
+    await page.waitForTimeout(500);
+
+    // Display math should render as a block-level katex element
+    const katexDisplay = await page.locator(".katex-display").count();
+    expect(katexDisplay).toBeGreaterThan(0);
+  });
+
+  test("invalid math shows error gracefully", async ({ page }) => {
+    const errors: string[] = [];
+    page.on("pageerror", (err) => errors.push(err.message));
+
+    await setupPage(page);
+
+    await page.evaluate(() => {
+      (window as any).MacmdEditor.createEditor(
+        document.getElementById("editor")!,
+        "Bad math: $\\invalid{command}$",
+        "reading",
+      );
+    });
+
+    await page.waitForTimeout(500);
+
+    // Should not crash the editor
+    const editorExists = await page.locator(".cm-editor").count();
+    expect(editorExists).toBe(1);
+  });
+});

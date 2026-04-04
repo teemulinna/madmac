@@ -708,6 +708,56 @@ assert "App survives very long lines" kill -0 "$MACMD_PID"
 bold ""
 
 # ==================================================
+# Phase 2 — Diagram rendering (RED tests)
+# These MUST fail until Phase 2 is implemented.
+# ==================================================
+
+bold ""
+bold "Feature: Mermaid diagram rendering"
+bold ""
+
+dim "  Scenario: Open file with mermaid diagram"
+
+cat > "$TEST_DIR/mermaid-test.md" << 'MERMAID'
+# Diagram Test
+
+```mermaid
+graph TD
+  A[Start] --> B[Process]
+  B --> C[End]
+```
+
+Text after diagram.
+MERMAID
+
+open -a "$APP" "$TEST_DIR/mermaid-test.md"
+sleep 3
+
+assert "App opens mermaid file without crash" kill -0 "$MACMD_PID"
+
+# Check if the window shows the file
+MERMAID_WINDOW=$(osascript -e 'tell application "System Events" to tell process "macmd" to get name of windows' 2>&1 || echo "")
+assert_contains "Window opened for mermaid file" "$MERMAID_WINDOW" "mermaid"
+
+bold ""
+dim "  Scenario: Open file with KaTeX math"
+
+cat > "$TEST_DIR/math-test.md" << 'MATH'
+# Math Test
+
+The equation $E = mc^2$ is inline.
+
+Display math:
+
+$$\int_0^\infty e^{-x} dx = 1$$
+MATH
+
+open -a "$APP" "$TEST_DIR/math-test.md"
+sleep 2
+
+assert "App opens math file without crash" kill -0 "$MACMD_PID"
+
+# ==================================================
 # Results
 # ==================================================
 bold ""
