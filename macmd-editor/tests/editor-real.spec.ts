@@ -1024,3 +1024,147 @@ test.describe("10 - KaTeX math rendering", () => {
     expect(editorExists).toBe(1);
   });
 });
+
+// ===========================================================================
+// REGRESSION TESTS — bugs found by user, not by our 220 tests
+// ===========================================================================
+
+test.describe("11 - Reading Mode inline formatting (regression)", () => {
+  test("bold text renders as <strong>, not raw **markers**", async ({
+    page,
+  }) => {
+    await setupPage(page);
+    await page.evaluate(() => {
+      (window as any).MacmdEditor.createEditor(
+        document.getElementById("editor")!,
+        "This is **bold** text",
+        "reading",
+      );
+    });
+    await page.waitForTimeout(300);
+
+    const html = await page.evaluate(
+      () => document.querySelector("#editor .reading-mode")?.innerHTML,
+    );
+    expect(html).toContain("<strong>bold</strong>");
+    expect(html).not.toContain("**bold**");
+  });
+
+  test("italic text renders as <em>, not raw *markers*", async ({ page }) => {
+    await setupPage(page);
+    await page.evaluate(() => {
+      (window as any).MacmdEditor.createEditor(
+        document.getElementById("editor")!,
+        "This is *italic* text",
+        "reading",
+      );
+    });
+    await page.waitForTimeout(300);
+
+    const html = await page.evaluate(
+      () => document.querySelector("#editor .reading-mode")?.innerHTML,
+    );
+    expect(html).toContain("<em>italic</em>");
+    expect(html).not.toContain("*italic*");
+  });
+
+  test("strikethrough renders as <del>, not raw ~~markers~~", async ({
+    page,
+  }) => {
+    await setupPage(page);
+    await page.evaluate(() => {
+      (window as any).MacmdEditor.createEditor(
+        document.getElementById("editor")!,
+        "This is ~~deleted~~ text",
+        "reading",
+      );
+    });
+    await page.waitForTimeout(300);
+
+    const html = await page.evaluate(
+      () => document.querySelector("#editor .reading-mode")?.innerHTML,
+    );
+    expect(html).toContain("<del>deleted</del>");
+    expect(html).not.toContain("~~deleted~~");
+  });
+
+  test("bold inside list items renders correctly", async ({ page }) => {
+    await setupPage(page);
+    await page.evaluate(() => {
+      (window as any).MacmdEditor.createEditor(
+        document.getElementById("editor")!,
+        "- **Fluid Mode** inline editing\n- *First-class* diagram support",
+        "reading",
+      );
+    });
+    await page.waitForTimeout(300);
+
+    const html = await page.evaluate(
+      () => document.querySelector("#editor .reading-mode")?.innerHTML,
+    );
+    expect(html).toContain("<strong>Fluid Mode</strong>");
+    expect(html).toContain("<em>First-class</em>");
+    expect(html).not.toContain("**Fluid Mode**");
+  });
+});
+
+test.describe("12 - Reading Mode KaTeX math (regression)", () => {
+  test("inline math $E=mc^2$ renders with KaTeX", async ({ page }) => {
+    await setupPage(page);
+    await page.evaluate(() => {
+      (window as any).MacmdEditor.createEditor(
+        document.getElementById("editor")!,
+        "The equation $E = mc^2$ is famous.",
+        "reading",
+      );
+    });
+    await page.waitForTimeout(500);
+
+    // Should have .katex element, not raw $...$
+    const katexCount = await page.locator("#editor .katex").count();
+    expect(katexCount).toBeGreaterThan(0);
+
+    const text = await page.evaluate(
+      () => document.querySelector("#editor .reading-mode")?.textContent,
+    );
+    expect(text).not.toContain("$E = mc^2$");
+  });
+
+  test("display math renders as block", async ({ page }) => {
+    await setupPage(page);
+    await page.evaluate(() => {
+      (window as any).MacmdEditor.createEditor(
+        document.getElementById("editor")!,
+        "Before\n\n$$\\int_0^1 x^2 dx$$\n\nAfter",
+        "reading",
+      );
+    });
+    await page.waitForTimeout(500);
+
+    const katexDisplay = await page.locator("#editor .katex-display").count();
+    expect(katexDisplay).toBeGreaterThan(0);
+  });
+});
+
+test.describe("13 - Code block syntax highlighting (regression)", () => {
+  test("python code has colored keywords", async ({ page }) => {
+    await setupPage(page);
+    await page.evaluate(() => {
+      (window as any).MacmdEditor.createEditor(
+        document.getElementById("editor")!,
+        '```python\ndef hello():\n    print("Hello")\n```',
+        "reading",
+      );
+    });
+    await page.waitForTimeout(500);
+
+    // Code block should have syntax-highlighted spans (not just plain text)
+    const hasColoredSpans = await page.evaluate(() => {
+      const codeEl = document.querySelector("#editor pre code");
+      if (!codeEl) return false;
+      const spans = codeEl.querySelectorAll("span[style], span[class]");
+      return spans.length > 0;
+    });
+    expect(hasColoredSpans).toBe(true);
+  });
+});
