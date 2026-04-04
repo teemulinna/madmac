@@ -26,46 +26,169 @@ import {
 import { fluidMode } from "./fluid-mode";
 import { mermaidExtension } from "./diagram-widget";
 import { mathExtension } from "./math-widget";
+import { renderMarkdownToHTML, READING_MODE_CSS } from "./reading-mode";
 
 export type EditorMode = "reading" | "fluid";
 
-/**
- * Compartments for dynamic reconfiguration without recreating the editor.
- */
-const editableCompartment = new Compartment();
-const readOnlyCompartment = new Compartment();
 const highlightCompartment = new Compartment();
-const fluidModeCompartment = new Compartment();
 
 let view: EditorView | null = null;
 let currentMode: EditorMode = "reading";
 let currentTheme: ThemeVariant = "light";
+let rawContent: string = "";
+let parentElement: HTMLElement | null = null;
 
-/**
- * Build the extensions for a given editing mode.
- */
-function modeExtensions(mode: EditorMode): {
-  editable: Extension;
-  readOnly: Extension;
-} {
-  return {
-    editable: EditorView.editable.of(mode === "fluid"),
-    readOnly: EditorState.readOnly.of(mode === "reading"),
-  };
-}
-
-/**
- * Build the highlight style extension for the given theme variant.
- */
 function highlightExtension(variant: ThemeVariant): Extension {
   return syntaxHighlighting(
     variant === "dark" ? darkMarkdownStyle : lightMarkdownStyle,
   );
 }
 
-/**
- * Create a new CodeMirror 6 editor inside the given parent element.
- */
+let cssInjected = false;
+function injectReadingCSS(): void {
+  if (cssInjected) return;
+  const style = document.createElement("style");
+  style.id = "macmd-reading-mode-css";
+  style.textContent = READING_MODE_CSS;
+  document.head.appendChild(style);
+  cssInjected = true;
+}
+
+function showReadingMode(parent: HTMLElement, content: string): void {
+  injectReadingCSS();
+  if (view) {
+    view.destroy();
+    view = null;
+  }
+  parent.innerHTML = renderMarkdownToHTML(content);
+  processMermaidInHTML(parent);
+  processKaTeXInHTML(parent);
+}
+
+async function processMermaidInHTML(parent: HTMLElement): Promise<void> {
+  const mermaid = (window as any).mermaid;
+  if (!mermaid) return;
+
+  const codeBlocks = parent.querySelectorAll("code.language-mermaid");
+  for (let i = 0; i < codeBlocks.length; i++) {
+    const code = codeBlocks[i];
+    const pre = code.parentElement;
+    const wrapper = pre?.parentElement;
+    if (!wrapper) continue;
+
+    const source = code.textContent || "";
+    try {
+      const id = "mermaid-reading-" + i + "-" + Date.now();
+      const { svg } = await mermaid.render(id, source);
+      const container = document.createElement("div");
+      container.className = "mermaid-diagram";
+      container.style.textAlign = "center";
+      container.style.margin = "1em 0";
+      container.innerHTML = svg;
+      wrapper.replaceWith(container);
+    } catch {
+      // Leave code block as-is on error
+    }
+  }
+}
+
+function processKaTeXInHTML(parent: HTMLElement): void {
+  const katex = (window as any).katex;
+  if (!katex) return;
+
+  const article = parent.querySelector(".reading-mode");
+  if (!article) return;
+
+  const walker = document.createTreeWalker(article, NodeFilter.SHOW_TEXT);
+  const replacements: { node: Text; newNodes: Node[] }[] = [];
+
+  let textNode: Text | null;
+  while ((textNode = walker.nextNode() as Text | null)) {
+    if (textNode.parentElement?.closest("pre, code")) continue;
+
+    const text = textNode.textContent || "";
+    const regex = /\$\$([\s\S]+?)\$\$|\$([^$\n]+?)\$/g;
+    let match;
+    let lastIndex = 0;
+    const fragments: Node[] = [];
+    let hasMatch = false;
+
+    while ((match = regex.exec(text)) !== null) {
+      hasMatch = true;
+      if (match.index > lastIndex) {
+        fragments.push(
+          document.createTextNode(text.slice(lastIndex, match.index)),
+        );
+      }
+
+      const isDisplay = match[1] !== undefined;
+      const tex = isDisplay ? match[1] : match[2];
+
+      try {
+        const span = document.createElement(isDisplay ? "div" : "span");
+        span.innerHTML = katex.renderToString(tex.trim(), {
+          displayMode: isDisplay,
+          throwOnError: false,
+        });
+        if (isDisplay) {
+          span.className = "katex-display";
+          span.style.textAlign = "center";
+          span.style.margin = "1em 0";
+        }
+        fragments.push(span);
+      } catch {
+        fragments.push(document.createTextNode(match[0]));
+      }
+      lastIndex = regex.lastIndex;
+    }
+
+    if (hasMatch) {
+      if (lastIndex < text.length) {
+        fragments.push(document.createTextNode(text.slice(lastIndex)));
+      }
+      replacements.push({ node: textNode, newNodes: fragments });
+    }
+  }
+
+  for (const { node, newNodes } of replacements) {
+    const parentNode = node.parentNode;
+    if (!parentNode) continue;
+    for (const newNode of newNodes) {
+      parentNode.insertBefore(newNode, node);
+    }
+    parentNode.removeChild(node);
+  }
+}
+
+function showFluidMode(
+  parent: HTMLElement,
+  content: string,
+  theme: ThemeVariant,
+): EditorView {
+  parent.innerHTML = "";
+
+  const state = EditorState.create({
+    doc: content,
+    extensions: [
+      history(),
+      keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap]),
+      markdown({ base: markdownLanguage, codeLanguages: languages }),
+      highlightCompartment.of(highlightExtension(theme)),
+      themeExtensions(theme),
+      headingLineClasses,
+      search(),
+      EditorView.lineWrapping,
+      EditorView.editable.of(true),
+      fluidMode(),
+      mermaidExtension(),
+      mathExtension(),
+      contentChangeNotifier(),
+    ],
+  });
+
+  return new EditorView({ state, parent });
+}
+
 export function createEditor(
   parent: HTMLElement,
   content: string = "",
@@ -74,106 +197,98 @@ export function createEditor(
 ): EditorView {
   currentMode = mode;
   currentTheme = theme ?? detectSystemTheme();
+  rawContent = content;
+  parentElement = parent;
 
-  const modeExts = modeExtensions(mode);
+  if (mode === "reading") {
+    showReadingMode(parent, content);
+    // Hidden CM6 to satisfy API contract (getContent, etc.)
+    const hiddenDiv = document.createElement("div");
+    hiddenDiv.style.display = "none";
+    parent.appendChild(hiddenDiv);
+    const state = EditorState.create({ doc: content });
+    view = new EditorView({ state, parent: hiddenDiv });
+  } else {
+    view = showFluidMode(parent, content, currentTheme);
+  }
 
-  const state = EditorState.create({
-    doc: content,
-    extensions: [
-      history(),
-      keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap]),
-      markdown({ base: markdownLanguage, codeLanguages: languages }),
-      highlightCompartment.of(highlightExtension(currentTheme)),
-      themeExtensions(currentTheme),
-      headingLineClasses,
-      search(),
-      EditorView.lineWrapping,
-      editableCompartment.of(modeExts.editable),
-      readOnlyCompartment.of(modeExts.readOnly),
-      fluidModeCompartment.of(mode === "fluid" ? fluidMode() : []),
-      mermaidExtension(),
-      mathExtension(),
-      contentChangeNotifier(),
-    ],
-  });
-
-  view = new EditorView({ state, parent });
   notifyReady();
   return view;
 }
 
-/**
- * Set the editor content (replaces all).
- */
 export function setContent(content: string): void {
-  if (!view) return;
-  view.dispatch({
-    changes: { from: 0, to: view.state.doc.length, insert: content },
-  });
+  rawContent = content;
+  if (view) {
+    view.dispatch({
+      changes: { from: 0, to: view.state.doc.length, insert: content },
+    });
+  }
+  if (currentMode === "reading" && parentElement) {
+    showReadingMode(parentElement, content);
+    const hiddenDiv = document.createElement("div");
+    hiddenDiv.style.display = "none";
+    parentElement.appendChild(hiddenDiv);
+    if (view) view.destroy();
+    const state = EditorState.create({ doc: content });
+    view = new EditorView({ state, parent: hiddenDiv });
+  }
 }
 
-/**
- * Get the current editor content as raw markdown string.
- */
 export function getContent(): string {
-  if (!view) return "";
-  return view.state.doc.toString();
+  if (currentMode === "fluid" && view) {
+    return view.state.doc.toString();
+  }
+  return rawContent;
 }
 
-/**
- * Switch between Reading Mode and Fluid Mode using compartment reconfiguration.
- * Does NOT recreate the editor — just reconfigures the relevant compartments.
- */
 export function setMode(mode: EditorMode): void {
-  if (!view || mode === currentMode) return;
+  if (mode === currentMode || !parentElement) return;
+
+  if (currentMode === "fluid" && view) {
+    rawContent = view.state.doc.toString();
+  }
+
   currentMode = mode;
 
-  const modeExts = modeExtensions(mode);
-  view.dispatch({
-    effects: [
-      editableCompartment.reconfigure(modeExts.editable),
-      readOnlyCompartment.reconfigure(modeExts.readOnly),
-      fluidModeCompartment.reconfigure(mode === "fluid" ? fluidMode() : []),
-    ],
-  });
+  if (mode === "reading") {
+    if (view) {
+      view.destroy();
+      view = null;
+    }
+    showReadingMode(parentElement, rawContent);
+    const hiddenDiv = document.createElement("div");
+    hiddenDiv.style.display = "none";
+    parentElement.appendChild(hiddenDiv);
+    const state = EditorState.create({ doc: rawContent });
+    view = new EditorView({ state, parent: hiddenDiv });
+  } else {
+    view = showFluidMode(parentElement, rawContent, currentTheme);
+  }
 
   notifyModeChanged(mode);
 }
 
-/**
- * Switch between light and dark theme using compartment reconfiguration.
- */
 export function setTheme(theme: ThemeVariant): void {
-  if (!view) return;
   currentTheme = theme;
-
-  view.dispatch({
-    effects: [
-      themeCompartment.reconfigure(getThemeExtension(theme)),
-      highlightCompartment.reconfigure(highlightExtension(theme)),
-    ],
-  });
-
+  if (currentMode === "fluid" && view) {
+    view.dispatch({
+      effects: [
+        themeCompartment.reconfigure(getThemeExtension(theme)),
+        highlightCompartment.reconfigure(highlightExtension(theme)),
+      ],
+    });
+  }
   notifyThemeChanged(theme);
 }
 
-/**
- * Get the current editor mode.
- */
 export function getMode(): EditorMode {
   return currentMode;
 }
 
-/**
- * Get the current theme variant.
- */
 export function getTheme(): ThemeVariant {
   return currentTheme;
 }
 
-/**
- * Get the raw EditorView instance (for advanced use / testing).
- */
 export function getView(): EditorView | null {
   return view;
 }
