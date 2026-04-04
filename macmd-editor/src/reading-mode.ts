@@ -1,60 +1,104 @@
 import { Marked } from "marked";
 import type { Tokens } from "marked";
+import hljs from "highlight.js/lib/core";
+import python from "highlight.js/lib/languages/python";
+import javascript from "highlight.js/lib/languages/javascript";
+import typescript from "highlight.js/lib/languages/typescript";
+import rust from "highlight.js/lib/languages/rust";
+import swift from "highlight.js/lib/languages/swift";
+import bash from "highlight.js/lib/languages/bash";
+import json from "highlight.js/lib/languages/json";
+import yaml from "highlight.js/lib/languages/yaml";
+import xml from "highlight.js/lib/languages/xml";
+import css from "highlight.js/lib/languages/css";
+import sql from "highlight.js/lib/languages/sql";
+import go from "highlight.js/lib/languages/go";
+import java from "highlight.js/lib/languages/java";
+import cpp from "highlight.js/lib/languages/cpp";
+import ruby from "highlight.js/lib/languages/ruby";
+import markdown from "highlight.js/lib/languages/markdown";
+
+// Register languages
+hljs.registerLanguage("python", python);
+hljs.registerLanguage("javascript", javascript);
+hljs.registerLanguage("js", javascript);
+hljs.registerLanguage("typescript", typescript);
+hljs.registerLanguage("ts", typescript);
+hljs.registerLanguage("rust", rust);
+hljs.registerLanguage("swift", swift);
+hljs.registerLanguage("bash", bash);
+hljs.registerLanguage("sh", bash);
+hljs.registerLanguage("shell", bash);
+hljs.registerLanguage("zsh", bash);
+hljs.registerLanguage("json", json);
+hljs.registerLanguage("yaml", yaml);
+hljs.registerLanguage("yml", yaml);
+hljs.registerLanguage("xml", xml);
+hljs.registerLanguage("html", xml);
+hljs.registerLanguage("css", css);
+hljs.registerLanguage("sql", sql);
+hljs.registerLanguage("go", go);
+hljs.registerLanguage("java", java);
+hljs.registerLanguage("cpp", cpp);
+hljs.registerLanguage("c", cpp);
+hljs.registerLanguage("ruby", ruby);
+hljs.registerLanguage("rb", ruby);
+hljs.registerLanguage("markdown", markdown);
+hljs.registerLanguage("md", markdown);
 
 /**
  * Reading Mode: renders markdown to beautiful HTML.
  * No CM6 editor — just a styled web page.
- *
- * This is what users see when they open a .md file from Finder.
- * CM6 is only used in Fluid Mode (Cmd+E).
  */
 
 const marked = new Marked();
 
-// Custom renderer for better output
+// Only override the code renderer for syntax highlighting + language label.
+// Do NOT override table, listitem, etc. — marked handles inline formatting
+// (bold, italic, strikethrough) automatically. Custom renderers that accept
+// raw text break this by bypassing inline token processing.
 marked.use({
   renderer: {
-    // Code blocks with language label
     code({ text, lang }: Tokens.Code): string {
-      const langClass = lang ? ` class="language-${lang}"` : "";
+      // Skip mermaid — handled separately
+      if (lang === "mermaid") {
+        const escaped = text
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+        return `<div class="code-block-wrapper"><pre><code class="language-mermaid">${escaped}</code></pre></div>`;
+      }
+
       const langLabel = lang
         ? `<span class="code-lang-label">${lang}</span>`
         : "";
-      const escaped = text
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
-      return `<div class="code-block-wrapper">${langLabel}<pre><code${langClass}>${escaped}</code></pre></div>`;
-    },
 
-    // Tables with proper styling
-    table({ header, rows }: Tokens.Table): string {
-      const headerCells = header
-        .map(
-          (cell) =>
-            `<th style="text-align:${cell.align || "left"}">${cell.text}</th>`,
-        )
-        .join("");
-      const bodyRows = rows
-        .map(
-          (row) =>
-            `<tr>${row.map((cell) => `<td style="text-align:${cell.align || "left"}">${cell.text}</td>`).join("")}</tr>`,
-        )
-        .join("");
-      return `<table><thead><tr>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table>`;
-    },
-
-    // Checkboxes in list items
-    listitem({ text, task, checked }: Tokens.ListItem): string {
-      if (task) {
-        const checkbox = checked
-          ? '<input type="checkbox" checked disabled>'
-          : '<input type="checkbox" disabled>';
-        return `<li class="task-item">${checkbox} ${text}</li>`;
+      let highlighted: string;
+      if (lang && hljs.getLanguage(lang)) {
+        highlighted = hljs.highlight(text, { language: lang }).value;
+      } else if (lang) {
+        // Unknown language — try auto-detection
+        try {
+          highlighted = hljs.highlightAuto(text).value;
+        } catch {
+          highlighted = text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
+        }
+      } else {
+        highlighted = text
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
       }
-      return `<li>${text}</li>`;
+
+      return `<div class="code-block-wrapper">${langLabel}<pre><code class="hljs${lang ? ` language-${lang}` : ""}">${highlighted}</code></pre></div>`;
     },
   },
+  // Enable GFM extensions (strikethrough, tables, etc.)
+  gfm: true,
+  breaks: false,
 });
 
 /**
@@ -283,7 +327,45 @@ export const READING_MODE_CSS = `
     margin: 1em 0;
   }
 
-  /* MathJax/KaTeX placeholder */
+  /* KaTeX */
   .reading-mode .katex { font-size: 1.1em; }
   .reading-mode .katex-display { margin: 1em 0; text-align: center; }
+
+  /* highlight.js syntax colors — dark theme (matches macOS dark) */
+  @media (prefers-color-scheme: dark) {
+    .hljs-keyword { color: #ff7ab2; }
+    .hljs-built_in { color: #dabaff; }
+    .hljs-string { color: #ff8170; }
+    .hljs-number { color: #d9c97c; }
+    .hljs-comment { color: #7f8c98; font-style: italic; }
+    .hljs-function { color: #67b7a4; }
+    .hljs-title { color: #67b7a4; }
+    .hljs-params { color: #acf2e4; }
+    .hljs-type { color: #dabaff; }
+    .hljs-attr { color: #d9c97c; }
+    .hljs-selector-tag { color: #ff7ab2; }
+    .hljs-selector-class { color: #67b7a4; }
+    .hljs-literal { color: #ff7ab2; }
+    .hljs-meta { color: #7f8c98; }
+    .hljs-variable { color: #acf2e4; }
+  }
+
+  /* highlight.js syntax colors — light theme */
+  @media (prefers-color-scheme: light) {
+    .hljs-keyword { color: #ad3da4; }
+    .hljs-built_in { color: #804fb8; }
+    .hljs-string { color: #d12f1b; }
+    .hljs-number { color: #272ad8; }
+    .hljs-comment { color: #707f8c; font-style: italic; }
+    .hljs-function { color: #4b9b8f; }
+    .hljs-title { color: #4b9b8f; }
+    .hljs-params { color: #4b9b8f; }
+    .hljs-type { color: #804fb8; }
+    .hljs-attr { color: #947100; }
+    .hljs-selector-tag { color: #ad3da4; }
+    .hljs-selector-class { color: #4b9b8f; }
+    .hljs-literal { color: #ad3da4; }
+    .hljs-meta { color: #707f8c; }
+    .hljs-variable { color: #4b9b8f; }
+  }
 `;

@@ -27,6 +27,10 @@ import { fluidMode } from "./fluid-mode";
 import { mermaidExtension } from "./diagram-widget";
 import { mathExtension } from "./math-widget";
 import { renderMarkdownToHTML, READING_MODE_CSS } from "./reading-mode";
+import katex from "katex";
+
+// Expose katex globally for Reading Mode HTML processing
+(window as any).katex = katex;
 
 export type EditorMode = "reading" | "fluid";
 
