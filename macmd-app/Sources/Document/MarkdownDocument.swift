@@ -31,16 +31,22 @@ final class MarkdownDocument: NSDocument {
         viewController.document = self
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 800, height: 600),
+            contentRect: NSRect(x: 0, y: 0, width: 1200, height: 800),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
         )
         window.contentViewController = viewController
-        window.center()
-        window.setFrameAutosaveName("MarkdownEditor")
         window.minSize = NSSize(width: 400, height: 300)
         window.title = displayName
+        window.isRestorable = false
+        // Defer frame setting to override macOS state restoration
+        DispatchQueue.main.async {
+            if let screen = NSScreen.main {
+                window.setFrame(screen.visibleFrame, display: true, animate: false)
+            }
+            window.makeKeyAndOrderFront(nil)
+        }
 
         let windowController = NSWindowController(window: window)
         addWindowController(windowController)

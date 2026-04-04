@@ -4,7 +4,12 @@ import WebKit
 final class EditorViewController: NSViewController, WKScriptMessageHandler {
     private var webView: WKWebView!
     private var isFluidMode = false
-    private var appearanceObservation: NSKeyValueObservation?
+    private var lineNumbersVisible = false
+    // Loaded from UserDefaults on init. nil = follow system.
+    private var userSelectedTheme: String? = {
+        let saved = UserDefaults.standard.string(forKey: "macmd.theme")
+        return (saved == "auto" || saved == nil) ? nil : saved
+    }()
     weak var document: MarkdownDocument?
 
     override func loadView() {
@@ -12,7 +17,6 @@ final class EditorViewController: NSViewController, WKScriptMessageHandler {
         let userContentController = WKUserContentController()
         userContentController.add(self, name: "macmd")
         config.userContentController = userContentController
-        // Allow file access for loading editor.js from the bundle
         config.preferences.setValue(true, forKey: "allowFileAccessFromFileURLs")
 
         webView = WKWebView(frame: .zero, configuration: config)
@@ -20,7 +24,80 @@ final class EditorViewController: NSViewController, WKScriptMessageHandler {
 
         view = webView
         loadEditorHTML()
-        observeAppearanceChanges()
+    }
+
+    // MARK: - Zoom
+
+    @objc func zoomIn(_ sender: Any?) {
+        webView.pageZoom = min(webView.pageZoom + 0.1, 3.0)
+    }
+
+    @objc func zoomOut(_ sender: Any?) {
+        webView.pageZoom = max(webView.pageZoom - 0.1, 0.5)
+    }
+
+    @objc func resetZoom(_ sender: Any?) {
+        webView.pageZoom = 1.0
+    }
+
+    // MARK: - Theme
+
+    @objc func setThemeLight(_ sender: Any?) {
+        userSelectedTheme = "light"
+        applyTheme("light")
+    }
+
+    @objc func setThemeDark(_ sender: Any?) {
+        userSelectedTheme = "dark"
+        applyTheme("dark")
+    }
+
+    @objc func setThemeSepia(_ sender: Any?) {
+        userSelectedTheme = "sepia"
+        applyTheme("sepia")
+    }
+
+    @objc func setThemeAuto(_ sender: Any?) {
+        userSelectedTheme = nil
+        let theme = systemTheme()
+        applyTheme(theme)
+    }
+
+    private func applyTheme(_ theme: String) {
+        webView.evaluateJavaScript("MacmdEditor.setTheme('\(theme)');")
+    }
+
+    private func systemTheme() -> String {
+        let appearance = view.effectiveAppearance
+        let isDark = appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+        return isDark ? "dark" : "light"
+    }
+
+    // MARK: - Font Size
+
+    @objc func increaseFontSize(_ sender: Any?) {
+        webView.evaluateJavaScript("MacmdEditor.setFontSize(MacmdEditor.getFontSize() + 2);")
+    }
+
+    @objc func decreaseFontSize(_ sender: Any?) {
+        webView.evaluateJavaScript("MacmdEditor.setFontSize(MacmdEditor.getFontSize() - 2);")
+    }
+
+    // MARK: - Line Numbers
+
+    @objc func toggleLineNumbers(_ sender: Any?) {
+        lineNumbersVisible.toggle()
+        let show = lineNumbersVisible ? "true" : "false"
+        webView.evaluateJavaScript("MacmdEditor.showLineNumbers(\(show));")
+        if let menuItem = sender as? NSMenuItem {
+            menuItem.state = lineNumbersVisible ? .on : .off
+        }
+    }
+
+    // MARK: - JS Bridge (for preferences)
+
+    func evaluateJS(_ js: String) {
+        webView.evaluateJavaScript(js)
     }
 
     // MARK: - Content
@@ -37,32 +114,12 @@ final class EditorViewController: NSViewController, WKScriptMessageHandler {
         webView.evaluateJavaScript("MacmdEditor.setMode('\(mode)');")
     }
 
-    // MARK: - Theme
-
-    private func observeAppearanceChanges() {
-        appearanceObservation = NSApp.observe(
-            \.effectiveAppearance,
-            options: [.new, .initial]
-        ) { [weak self] _, _ in
-            self?.updateTheme()
-        }
-    }
-
-    private func updateTheme() {
-        let appearance = view.effectiveAppearance
-        let isDark = appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-        let theme = isDark ? "dark" : "light"
-        webView.evaluateJavaScript("MacmdEditor.setTheme('\(theme)');")
-    }
-
     // MARK: - WKScriptMessageHandler
 
     nonisolated func userContentController(
         _ userContentController: WKUserContentController,
         didReceive message: WKScriptMessage
     ) {
-        // WKScriptMessageHandler delivers on the main thread, so we can
-        // safely assume main actor isolation for accessing our properties.
         MainActor.assumeIsolated {
             guard let body = message.body as? [String: Any],
                   let action = body["action"] as? String else { return }
@@ -77,7 +134,18 @@ final class EditorViewController: NSViewController, WKScriptMessageHandler {
                 if let content = self.document?.content {
                     self.loadContent(content)
                 }
-                self.updateTheme()
+                // Apply saved settings
+                let theme = self.userSelectedTheme ?? self.systemTheme()
+                self.applyTheme(theme)
+
+                let fontSize = UserDefaults.standard.integer(forKey: "macmd.fontSize")
+                if fontSize > 0 {
+                    self.webView.evaluateJavaScript("MacmdEditor.setFontSize(\(fontSize));")
+                }
+                if UserDefaults.standard.bool(forKey: "macmd.lineNumbers") {
+                    self.lineNumbersVisible = true
+                    self.webView.evaluateJavaScript("MacmdEditor.showLineNumbers(true);")
+                }
             default:
                 break
             }
@@ -97,16 +165,13 @@ final class EditorViewController: NSViewController, WKScriptMessageHandler {
     }
 
     private func loadEditorHTML() {
-        // WKWebView's loadHTMLString doesn't reliably load local <script src="...">
-        // even with a file:// baseURL. Use loadFileURL with a real HTML file instead.
         guard let editorDir = Bundle.main.resourceURL?.appendingPathComponent("editor") else {
             return
         }
 
         let indexURL = editorDir.appendingPathComponent("index.html")
 
-        // Write index.html to the editor directory if it doesn't exist
-        // (or always overwrite to ensure it's current)
+        // No @media rules — JS controls all colors via setTheme()
         let html = """
         <!DOCTYPE html>
         <html>
@@ -114,29 +179,19 @@ final class EditorViewController: NSViewController, WKScriptMessageHandler {
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1">
             <style>
-                :root { color-scheme: light dark; }
                 * { margin: 0; padding: 0; box-sizing: border-box; }
                 body {
                     font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
                     font-size: 16px;
                     line-height: 1.6;
+                    background: #ffffff;
+                    color: #1e1e1e;
                 }
                 #editor {
-                    max-width: 720px;
-                    margin: 0 auto;
-                    padding: 24px 48px;
+                    width: 100%;
                     min-height: 100vh;
                 }
-                .cm-editor { height: 100vh; outline: none; }
-                .cm-scroller { font-family: inherit; font-size: inherit; line-height: inherit; }
-                .cm-content { font-family: inherit; padding: 24px 0; }
-                .cm-line { padding: 0; }
-                @media (prefers-color-scheme: dark) {
-                    body { background: #1e1e1e; color: #d4d4d4; }
-                }
-                @media (prefers-color-scheme: light) {
-                    body { background: #ffffff; color: #1e1e1e; }
-                }
+                .cm-editor { min-height: 100vh; outline: none; }
             </style>
         </head>
         <body>

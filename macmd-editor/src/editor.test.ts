@@ -8,6 +8,9 @@ import {
   getMode,
   getTheme,
   getView,
+  setFontSize,
+  getFontSize,
+  showLineNumbers,
 } from "./editor";
 import type { EditorMode } from "./editor";
 import type { ThemeVariant } from "./theme";
@@ -381,8 +384,131 @@ describe("Markdown syntax styling", () => {
   it("syntax highlighting switches with theme", () => {
     view = createEditor(parent, "# Hello **world**", "reading", "light");
     setTheme("dark");
-    // Editor should still be functional after syntax highlight reconfiguration
     expect(getContent()).toBe("# Hello **world**");
     expect(getTheme()).toBe("dark");
+  });
+});
+
+// ---- NEW TESTS: Sepia theme ----
+
+describe("Sepia theme", () => {
+  let parent: HTMLElement;
+  let view: EditorView;
+
+  beforeEach(() => {
+    parent = document.createElement("div");
+    document.body.appendChild(parent);
+  });
+
+  afterEach(() => {
+    view?.destroy();
+    parent.remove();
+  });
+
+  it("accepts sepia as theme variant", () => {
+    view = createEditor(parent, "# Hello", "reading", "sepia");
+    expect(getTheme()).toBe("sepia");
+  });
+
+  it("switches to sepia at runtime", () => {
+    view = createEditor(parent, "# Hello", "reading", "light");
+    setTheme("sepia");
+    expect(getTheme()).toBe("sepia");
+  });
+
+  it("cycles through all three themes", () => {
+    view = createEditor(parent, "test", "fluid", "light");
+    setTheme("dark");
+    expect(getTheme()).toBe("dark");
+    setTheme("sepia");
+    expect(getTheme()).toBe("sepia");
+    setTheme("light");
+    expect(getTheme()).toBe("light");
+  });
+
+  it("content preserved after theme change to sepia", () => {
+    view = createEditor(parent, "# Preserved", "fluid", "light");
+    setTheme("sepia");
+    expect(getContent()).toBe("# Preserved");
+  });
+});
+
+// ---- NEW TESTS: Font size ----
+
+describe("Font size", () => {
+  let parent: HTMLElement;
+  let view: EditorView;
+
+  beforeEach(() => {
+    parent = document.createElement("div");
+    document.body.appendChild(parent);
+  });
+
+  afterEach(() => {
+    view?.destroy();
+    parent.remove();
+  });
+
+  it("setFontSize updates font size", () => {
+    view = createEditor(parent, "test", "fluid");
+    setFontSize(18);
+    expect(getFontSize()).toBe(18);
+  });
+
+  it("getFontSize returns default 14", () => {
+    view = createEditor(parent, "test", "fluid");
+    expect(getFontSize()).toBe(14);
+  });
+
+  it("clamps minimum to 10", () => {
+    view = createEditor(parent, "test", "fluid");
+    setFontSize(5);
+    expect(getFontSize()).toBeGreaterThanOrEqual(10);
+  });
+
+  it("clamps maximum to 32", () => {
+    view = createEditor(parent, "test", "fluid");
+    setFontSize(50);
+    expect(getFontSize()).toBeLessThanOrEqual(32);
+  });
+
+  it("content preserved after font size change", () => {
+    view = createEditor(parent, "# Keep this", "fluid");
+    setFontSize(20);
+    expect(getContent()).toBe("# Keep this");
+  });
+});
+
+// ---- NEW TESTS: Line numbers ----
+
+describe("Line numbers", () => {
+  let parent: HTMLElement;
+  let view: EditorView;
+
+  beforeEach(() => {
+    parent = document.createElement("div");
+    document.body.appendChild(parent);
+  });
+
+  afterEach(() => {
+    view?.destroy();
+    parent.remove();
+  });
+
+  it("showLineNumbers(true) enables line number gutter", () => {
+    view = createEditor(parent, "Line 1\nLine 2", "fluid");
+    showLineNumbers(true);
+    // The gutter should exist in the DOM
+    const gutters = parent.querySelector(".cm-gutters");
+    expect(gutters).toBeTruthy();
+  });
+
+  it("showLineNumbers(false) hides gutters", () => {
+    view = createEditor(parent, "test", "fluid");
+    showLineNumbers(true);
+    showLineNumbers(false);
+    // Gutters should be hidden
+    const gutters = parent.querySelector(".cm-lineNumbers");
+    expect(gutters).toBeFalsy();
   });
 });

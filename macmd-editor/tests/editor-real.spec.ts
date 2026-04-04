@@ -328,7 +328,7 @@ test.describe("5 - Markdown syntax highlighting", () => {
       (window as any).MacmdEditor.createEditor(
         document.getElementById("editor")!,
         "text\n\n```js\nconst x = 1;\n```\n\nmore text",
-        "reading",
+        "fluid",
       );
     });
 
@@ -835,8 +835,8 @@ test.describe("9 - Mermaid diagram rendering", () => {
     // Wait for mermaid rendering (may need time for async render)
     await page.waitForTimeout(1000);
 
-    // There should be an SVG element rendered from the mermaid code
-    const svgCount = await page.locator(".cm-editor svg").count();
+    // There should be an SVG element in the reading mode container
+    const svgCount = await page.locator(".mermaid-diagram svg").count();
     expect(svgCount).toBeGreaterThan(0);
   });
 
@@ -855,7 +855,7 @@ test.describe("9 - Mermaid diagram rendering", () => {
 
     // The SVG should contain text nodes for "Hello" and "World"
     const svgText = await page.evaluate(() => {
-      const svg = document.querySelector(".cm-editor svg");
+      const svg = document.querySelector(".mermaid-diagram svg");
       return svg ? svg.textContent : null;
     });
     expect(svgText).not.toBeNull();
@@ -875,8 +875,8 @@ test.describe("9 - Mermaid diagram rendering", () => {
       );
     });
 
-    // Poll for SVG appearance
-    await expect(page.locator(".cm-editor svg")).toBeVisible({ timeout: 500 });
+    // Poll for SVG appearance in reading mode container
+    await expect(page.locator(".mermaid-diagram svg")).toBeVisible({ timeout: 500 });
     const elapsed = Date.now() - startTime;
     expect(elapsed).toBeLessThan(500);
   });
@@ -949,13 +949,13 @@ test.describe("9 - Mermaid diagram rendering", () => {
 
     await page.waitForTimeout(1500);
 
-    // Both diagrams should render as SVGs
-    const svgCount = await page.locator(".cm-editor svg").count();
+    // Both diagrams should render as SVGs in reading mode
+    const svgCount = await page.locator(".mermaid-diagram svg").count();
     expect(svgCount).toBeGreaterThanOrEqual(2);
 
     // Both should contain their respective text
     const allSvgText = await page.evaluate(() => {
-      const svgs = document.querySelectorAll(".cm-editor svg");
+      const svgs = document.querySelectorAll(".mermaid-diagram svg");
       return Array.from(svgs).map((svg) => svg.textContent);
     });
     expect(allSvgText.some((t) => t?.includes("First"))).toBe(true);
@@ -1166,5 +1166,415 @@ test.describe("13 - Code block syntax highlighting (regression)", () => {
       return spans.length > 0;
     });
     expect(hasColoredSpans).toBe(true);
+  });
+});
+
+// ===========================================================================
+// DUAL-LAYER ARCHITECTURE — RED TESTS
+// Reading Mode = HTML (marked.js), Fluid Mode = CM6.
+// Both layers coexist; visibility toggles between them.
+// CM6 is NEVER destroyed — undo, cursor, scroll preserved.
+// ===========================================================================
+
+// ---------------------------------------------------------------------------
+// 14. Dual-layer mode architecture
+// ---------------------------------------------------------------------------
+test.describe("14 - Dual-layer mode architecture", () => {
+  test("reading mode shows .reading-mode article with rendered HTML", async ({
+    page,
+  }) => {
+    await setupPage(page);
+    await page.evaluate(() => {
+      (window as any).MacmdEditor.createEditor(
+        document.getElementById("editor")!,
+        "# Hello\n\n**Bold** and *italic*",
+        "reading",
+      );
+    });
+
+    await expect(page.locator(".reading-mode")).toBeVisible();
+    const html = await page.locator(".reading-mode").innerHTML();
+    expect(html).toContain("<h1");
+    expect(html).toContain("<strong>Bold</strong>");
+    expect(html).toContain("<em>italic</em>");
+  });
+
+  test("reading mode hides CM6 from view", async ({ page }) => {
+    await setupPage(page);
+    await page.evaluate(() => {
+      (window as any).MacmdEditor.createEditor(
+        document.getElementById("editor")!,
+        "# Hello",
+        "reading",
+      );
+    });
+
+    // CM6 must exist in DOM (never destroyed) but not be visible
+    await expect(page.locator(".cm-editor")).toHaveCount(1);
+    await expect(page.locator(".cm-editor")).not.toBeVisible();
+  });
+
+  test("fluid mode shows CM6, hides reading HTML", async ({ page }) => {
+    await setupPage(page);
+    await page.evaluate(() => {
+      (window as any).MacmdEditor.createEditor(
+        document.getElementById("editor")!,
+        "# Hello",
+        "fluid",
+      );
+    });
+
+    await expect(page.locator(".cm-editor")).toBeVisible();
+    const readingCount = await page.locator(".reading-mode").count();
+    if (readingCount > 0) {
+      await expect(page.locator(".reading-mode")).not.toBeVisible();
+    }
+  });
+
+  test("fluid→reading: rendered HTML replaces visible CM6", async ({
+    page,
+  }) => {
+    await setupPage(page);
+    await page.evaluate(() => {
+      (window as any).MacmdEditor.createEditor(
+        document.getElementById("editor")!,
+        "# Title\n\n**Bold** text",
+        "fluid",
+      );
+      (window as any).MacmdEditor.setMode("reading");
+    });
+
+    await expect(page.locator(".reading-mode")).toBeVisible();
+    await expect(page.locator(".cm-editor")).not.toBeVisible();
+    const html = await page.locator(".reading-mode").innerHTML();
+    expect(html).toContain("<strong>Bold</strong>");
+  });
+
+  test("reading→fluid: CM6 reappears, HTML hidden", async ({ page }) => {
+    await setupPage(page);
+    await page.evaluate(() => {
+      (window as any).MacmdEditor.createEditor(
+        document.getElementById("editor")!,
+        "# Hello",
+        "reading",
+      );
+      (window as any).MacmdEditor.setMode("fluid");
+    });
+
+    await expect(page.locator(".cm-editor")).toBeVisible();
+    await expect(page.locator(".reading-mode")).not.toBeVisible();
+  });
+
+  test("edits in fluid mode reflected in reading HTML", async ({ page }) => {
+    await setupPage(page);
+    await page.evaluate(() => {
+      (window as any).MacmdEditor.createEditor(
+        document.getElementById("editor")!,
+        "Original text",
+        "fluid",
+      );
+    });
+
+    await page.locator(".cm-content").click();
+    await page.keyboard.press("End");
+    await page.keyboard.type(" ADDED");
+
+    await page.evaluate(() =>
+      (window as any).MacmdEditor.setMode("reading"),
+    );
+    await page.waitForTimeout(200);
+
+    const text = await page.locator(".reading-mode").textContent();
+    expect(text).toContain("ADDED");
+  });
+
+  test("CM6 view instance preserved across mode switches", async ({
+    page,
+  }) => {
+    await setupPage(page);
+
+    await page.evaluate(() => {
+      (window as any).MacmdEditor.createEditor(
+        document.getElementById("editor")!,
+        "test content",
+        "fluid",
+      );
+      // Tag the view object to verify identity
+      (window as any).MacmdEditor.getView().__marker = 42;
+    });
+
+    // Round-trip through reading mode
+    await page.evaluate(() => {
+      (window as any).MacmdEditor.setMode("reading");
+      (window as any).MacmdEditor.setMode("fluid");
+    });
+
+    const marker = await page.evaluate(
+      () => (window as any).MacmdEditor.getView().__marker,
+    );
+    expect(marker).toBe(42);
+  });
+
+  test("undo history survives mode switch round-trip", async ({ page }) => {
+    await setupPage(page);
+
+    // Create editor and make a programmatic change (clean undo boundary)
+    await page.evaluate(() => {
+      (window as any).MacmdEditor.createEditor(
+        document.getElementById("editor")!,
+        "AAA",
+        "fluid",
+      );
+      const v = (window as any).MacmdEditor.getView();
+      v.dispatch({ changes: { from: 3, insert: " BBB" } });
+    });
+
+    let content = await page.evaluate(() =>
+      (window as any).MacmdEditor.getContent(),
+    );
+    expect(content).toBe("AAA BBB");
+
+    // Round-trip through reading mode
+    await page.evaluate(() => {
+      (window as any).MacmdEditor.setMode("reading");
+      (window as any).MacmdEditor.setMode("fluid");
+    });
+
+    // Focus and undo via keyboard
+    await page.locator(".cm-content").click();
+    await page.keyboard.press("Meta+z");
+    await page.waitForTimeout(100);
+
+    content = await page.evaluate(() =>
+      (window as any).MacmdEditor.getContent(),
+    );
+    expect(content).toBe("AAA");
+  });
+
+  test("reading mode content fills window width with padding", async ({
+    page,
+  }) => {
+    // Note: this test is at the end of the dual-layer section
+    await setupPage(page);
+
+    await page.setViewportSize({ width: 1440, height: 900 });
+
+    await page.evaluate(() => {
+      const el = document.getElementById("editor")!;
+      el.style.width = "100%";
+      (window as any).MacmdEditor.createEditor(
+        el,
+        "# Wide content test",
+        "reading",
+      );
+    });
+
+    // .reading-mode should fill the viewport (minus padding)
+    const articleWidth = await page.locator(".reading-mode").evaluate(
+      (el) => el.getBoundingClientRect().width,
+    );
+    // Full width = 1440, with 48px padding each side = 1344
+    expect(articleWidth).toBeGreaterThan(1300);
+  });
+});
+
+// ===========================================================================
+// SETTINGS & THEMES — RED TESTS
+// ===========================================================================
+
+// ---------------------------------------------------------------------------
+// 15. Theme variants: light, dark, sepia
+// ---------------------------------------------------------------------------
+test.describe("15 - Theme variants", () => {
+  test("sepia theme applies warm background in edit mode", async ({
+    page,
+  }) => {
+    await setupPage(page);
+    await page.evaluate(() => {
+      (window as any).MacmdEditor.createEditor(
+        document.getElementById("editor")!,
+        "# Hello",
+        "fluid",
+        "sepia",
+      );
+    });
+
+    const bg = await page.locator(".cm-editor").evaluate((el) =>
+      getComputedStyle(el).backgroundColor,
+    );
+    // Sepia background should be warm — not pure white, not dark
+    // Expect something like rgb(253, 246, 227) or similar warm tone
+    const match = bg.match(/rgb\((\d+), (\d+), (\d+)\)/);
+    expect(match).toBeTruthy();
+    const [, r, g, b] = match!.map(Number);
+    // Warm: red > green > blue, clearly not pure white
+    expect(r).toBeGreaterThan(230);
+    expect(r).toBeGreaterThan(b);
+    expect(r - b).toBeGreaterThan(10);
+  });
+
+  test("sepia theme applies warm colors in reading mode", async ({
+    page,
+  }) => {
+    await setupPage(page);
+    await page.evaluate(() => {
+      (window as any).MacmdEditor.createEditor(
+        document.getElementById("editor")!,
+        "# Hello",
+        "reading",
+        "sepia",
+      );
+    });
+
+    const bg = await page.evaluate(() => {
+      const body = document.body;
+      return getComputedStyle(body).backgroundColor;
+    });
+    // Body should have warm background
+    expect(bg).not.toBe("rgb(255, 255, 255)");
+    expect(bg).not.toBe("rgb(13, 17, 22)");
+  });
+
+  test("setTheme switches to sepia at runtime", async ({ page }) => {
+    await setupPage(page);
+    await page.evaluate(() => {
+      (window as any).MacmdEditor.createEditor(
+        document.getElementById("editor")!,
+        "# Hello",
+        "fluid",
+        "light",
+      );
+    });
+
+    await page.evaluate(() =>
+      (window as any).MacmdEditor.setTheme("sepia"),
+    );
+
+    const theme = await page.evaluate(() =>
+      (window as any).MacmdEditor.getTheme(),
+    );
+    expect(theme).toBe("sepia");
+  });
+
+  test("all three themes cycle correctly", async ({ page }) => {
+    await setupPage(page);
+    await page.evaluate(() => {
+      (window as any).MacmdEditor.createEditor(
+        document.getElementById("editor")!,
+        "# Test",
+        "fluid",
+        "light",
+      );
+    });
+
+    for (const t of ["dark", "sepia", "light"]) {
+      await page.evaluate((theme) =>
+        (window as any).MacmdEditor.setTheme(theme), t,
+      );
+      const current = await page.evaluate(() =>
+        (window as any).MacmdEditor.getTheme(),
+      );
+      expect(current).toBe(t);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 16. Font size setting
+// ---------------------------------------------------------------------------
+test.describe("16 - Font size setting", () => {
+  test("setFontSize changes editor font size", async ({ page }) => {
+    await setupPage(page);
+    await page.evaluate(() => {
+      (window as any).MacmdEditor.createEditor(
+        document.getElementById("editor")!,
+        "# Hello",
+        "fluid",
+      );
+      (window as any).MacmdEditor.setFontSize(18);
+    });
+
+    const fontSize = await page.locator(".cm-editor").evaluate((el) =>
+      getComputedStyle(el).fontSize,
+    );
+    expect(fontSize).toBe("18px");
+  });
+
+  test("getFontSize returns current font size", async ({ page }) => {
+    await setupPage(page);
+    await page.evaluate(() => {
+      (window as any).MacmdEditor.createEditor(
+        document.getElementById("editor")!,
+        "test",
+        "fluid",
+      );
+      (window as any).MacmdEditor.setFontSize(20);
+    });
+
+    const size = await page.evaluate(() =>
+      (window as any).MacmdEditor.getFontSize(),
+    );
+    expect(size).toBe(20);
+  });
+
+  test("font size clamps to valid range", async ({ page }) => {
+    await setupPage(page);
+    await page.evaluate(() => {
+      (window as any).MacmdEditor.createEditor(
+        document.getElementById("editor")!,
+        "test",
+        "fluid",
+      );
+    });
+
+    // Too small
+    await page.evaluate(() => (window as any).MacmdEditor.setFontSize(6));
+    let size = await page.evaluate(() =>
+      (window as any).MacmdEditor.getFontSize(),
+    );
+    expect(size).toBeGreaterThanOrEqual(10);
+
+    // Too large
+    await page.evaluate(() => (window as any).MacmdEditor.setFontSize(100));
+    size = await page.evaluate(() =>
+      (window as any).MacmdEditor.getFontSize(),
+    );
+    expect(size).toBeLessThanOrEqual(32);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 17. Line numbers setting
+// ---------------------------------------------------------------------------
+test.describe("17 - Line numbers setting", () => {
+  test("showLineNumbers makes gutters visible", async ({ page }) => {
+    await setupPage(page);
+    await page.evaluate(() => {
+      (window as any).MacmdEditor.createEditor(
+        document.getElementById("editor")!,
+        "Line 1\nLine 2\nLine 3",
+        "fluid",
+      );
+      (window as any).MacmdEditor.showLineNumbers(true);
+    });
+
+    const gutters = page.locator(".cm-gutters");
+    await expect(gutters).toBeVisible();
+  });
+
+  test("hideLineNumbers hides gutters", async ({ page }) => {
+    await setupPage(page);
+    await page.evaluate(() => {
+      (window as any).MacmdEditor.createEditor(
+        document.getElementById("editor")!,
+        "Line 1\nLine 2",
+        "fluid",
+      );
+      (window as any).MacmdEditor.showLineNumbers(true);
+      (window as any).MacmdEditor.showLineNumbers(false);
+    });
+
+    const gutters = page.locator(".cm-gutters");
+    await expect(gutters).not.toBeVisible();
   });
 });

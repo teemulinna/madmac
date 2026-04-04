@@ -1,217 +1,172 @@
-import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
+import { HighlightStyle } from "@codemirror/language";
 import { tags } from "@lezer/highlight";
-import { Extension } from "@codemirror/state";
 import { ViewPlugin, DecorationSet, Decoration, EditorView } from "@codemirror/view";
 import { syntaxTree } from "@codemirror/language";
 
 /**
- * Syntax highlighting styles for markdown content.
- * Maps lezer-markdown tags to visual CSS styles for a beautiful reading experience.
+ * Syntax highlighting — GitHub Light.
+ * Colors only, no font-size or font-weight changes.
+ * Edit mode = raw monospace text with syntax coloring.
  */
-
 const lightMarkdownStyle = HighlightStyle.define([
-  // Headings — styled large and bold via tag-based highlighting
-  { tag: tags.heading1, fontSize: "2em", fontWeight: "700", lineHeight: "1.2", letterSpacing: "-0.02em" },
-  { tag: tags.heading2, fontSize: "1.5em", fontWeight: "600", lineHeight: "1.3", letterSpacing: "-0.01em" },
-  { tag: tags.heading3, fontSize: "1.25em", fontWeight: "600", lineHeight: "1.4" },
-  { tag: tags.heading4, fontSize: "1.125em", fontWeight: "600", lineHeight: "1.4" },
-  { tag: tags.heading5, fontSize: "1.0625em", fontWeight: "600", lineHeight: "1.5" },
-  { tag: tags.heading6, fontSize: "1em", fontWeight: "600", lineHeight: "1.5", color: "#6e6e73" },
+  // Headings — blue accent
+  { tag: tags.heading1, color: "#0550ae" },
+  { tag: tags.heading2, color: "#0550ae" },
+  { tag: tags.heading3, color: "#0550ae" },
+  { tag: tags.heading4, color: "#0550ae" },
+  { tag: tags.heading5, color: "#0550ae" },
+  { tag: tags.heading6, color: "#6e7781" },
+  { tag: tags.heading, color: "#0550ae" },
 
-  // Emphasis
-  { tag: tags.emphasis, fontStyle: "italic" },
-  { tag: tags.strong, fontWeight: "700" },
-  { tag: tags.strikethrough, textDecoration: "line-through", color: "#86868b" },
+  // Emphasis — color only, no style changes
+  { tag: tags.emphasis, color: "#24292f" },
+  { tag: tags.strong, color: "#24292f" },
+  { tag: tags.strikethrough, color: "#6e7781" },
 
   // Links
-  { tag: tags.link, color: "#007aff", textDecoration: "underline" },
-  { tag: tags.url, color: "#007aff" },
+  { tag: tags.link, color: "#0550ae" },
+  { tag: tags.url, color: "#0a3069" },
 
   // Inline code
-  {
-    tag: tags.monospace,
-    fontFamily: "'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace",
-    fontSize: "0.9em",
-    backgroundColor: "#f5f5f7",
-    borderRadius: "3px",
-  },
+  { tag: tags.monospace, color: "#0550ae" },
 
-  // Code block / fenced code content
-  {
-    tag: tags.content,
-    // default content — no special style
-  },
+  // Markdown syntax chars (#, **, *, ```, >, -)
+  { tag: tags.processingInstruction, color: "#6e7781" },
+  { tag: tags.meta, color: "#6e7781" },
 
-  // Block-level markers
-  { tag: tags.heading, fontWeight: "600" },
-  { tag: tags.quote, color: "#6e6e73", fontStyle: "italic" },
-  { tag: tags.list, color: "#1d1d1f" },
+  // Blockquotes
+  { tag: tags.quote, color: "#116329" },
 
-  // Markdown syntax characters (hash marks, asterisks, etc.)
-  { tag: tags.processingInstruction, color: "#86868b" },
-  { tag: tags.meta, color: "#86868b" },
+  // Lists
+  { tag: tags.list, color: "#953800" },
 
   // Horizontal rule
-  { tag: tags.contentSeparator, color: "#d1d1d6" },
+  { tag: tags.contentSeparator, color: "#0550ae" },
 
-  // Code block language-specific tokens (when code highlighting loads)
-  { tag: tags.keyword, color: "#ad3da4" },
-  { tag: tags.string, color: "#d12f1b" },
-  { tag: tags.comment, color: "#8e8e93", fontStyle: "italic" },
-  { tag: tags.number, color: "#272ad8" },
-  { tag: tags.function(tags.variableName), color: "#4b21b0" },
-  { tag: tags.definition(tags.variableName), color: "#3900a0" },
-  { tag: tags.typeName, color: "#0b4f79" },
-  { tag: tags.bool, color: "#ad3da4" },
-  { tag: tags.operator, color: "#1d1d1f" },
-  { tag: tags.className, color: "#3900a0" },
-  { tag: tags.propertyName, color: "#1d1d1f" },
-  { tag: tags.attributeName, color: "#836c28" },
-  { tag: tags.attributeValue, color: "#d12f1b" },
-  { tag: tags.regexp, color: "#d12f1b" },
-  { tag: tags.tagName, color: "#ad3da4" },
-  { tag: tags.labelName, color: "#1d1d1f" },
+  // Code syntax highlighting
+  { tag: tags.keyword, color: "#cf222e" },
+  { tag: tags.string, color: "#0a3069" },
+  { tag: tags.comment, color: "#6e7781", fontStyle: "italic" },
+  { tag: tags.number, color: "#0550ae" },
+  { tag: tags.function(tags.variableName), color: "#8250df" },
+  { tag: tags.definition(tags.variableName), color: "#8250df" },
+  { tag: tags.typeName, color: "#953800" },
+  { tag: tags.bool, color: "#0550ae" },
+  { tag: tags.operator, color: "#24292f" },
+  { tag: tags.className, color: "#953800" },
+  { tag: tags.propertyName, color: "#24292f" },
+  { tag: tags.attributeName, color: "#953800" },
+  { tag: tags.attributeValue, color: "#0a3069" },
+  { tag: tags.regexp, color: "#0a3069" },
+  { tag: tags.tagName, color: "#116329" },
+  { tag: tags.labelName, color: "#24292f" },
 ]);
 
+/**
+ * Syntax highlighting — GitHub Dark.
+ */
 const darkMarkdownStyle = HighlightStyle.define([
   // Headings
-  { tag: tags.heading1, fontSize: "2em", fontWeight: "700", lineHeight: "1.2", letterSpacing: "-0.02em" },
-  { tag: tags.heading2, fontSize: "1.5em", fontWeight: "600", lineHeight: "1.3", letterSpacing: "-0.01em" },
-  { tag: tags.heading3, fontSize: "1.25em", fontWeight: "600", lineHeight: "1.4" },
-  { tag: tags.heading4, fontSize: "1.125em", fontWeight: "600", lineHeight: "1.4" },
-  { tag: tags.heading5, fontSize: "1.0625em", fontWeight: "600", lineHeight: "1.5" },
-  { tag: tags.heading6, fontSize: "1em", fontWeight: "600", lineHeight: "1.5", color: "#98989d" },
+  { tag: tags.heading1, color: "#79c0ff" },
+  { tag: tags.heading2, color: "#79c0ff" },
+  { tag: tags.heading3, color: "#79c0ff" },
+  { tag: tags.heading4, color: "#79c0ff" },
+  { tag: tags.heading5, color: "#79c0ff" },
+  { tag: tags.heading6, color: "#8b949e" },
+  { tag: tags.heading, color: "#79c0ff" },
 
   // Emphasis
-  { tag: tags.emphasis, fontStyle: "italic" },
-  { tag: tags.strong, fontWeight: "700" },
-  { tag: tags.strikethrough, textDecoration: "line-through", color: "#98989d" },
+  { tag: tags.emphasis, color: "#c9d1d9" },
+  { tag: tags.strong, color: "#c9d1d9" },
+  { tag: tags.strikethrough, color: "#8b949e" },
 
   // Links
-  { tag: tags.link, color: "#0a84ff", textDecoration: "underline" },
-  { tag: tags.url, color: "#0a84ff" },
+  { tag: tags.link, color: "#79c0ff" },
+  { tag: tags.url, color: "#a5d6ff" },
 
   // Inline code
-  {
-    tag: tags.monospace,
-    fontFamily: "'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace",
-    fontSize: "0.9em",
-    backgroundColor: "#2c2c2e",
-    borderRadius: "3px",
-  },
+  { tag: tags.monospace, color: "#79c0ff" },
 
-  // Block-level markers
-  { tag: tags.heading, fontWeight: "600" },
-  { tag: tags.quote, color: "#98989d", fontStyle: "italic" },
-  { tag: tags.list, color: "#e5e5e7" },
+  // Markdown syntax chars
+  { tag: tags.processingInstruction, color: "#8b949e" },
+  { tag: tags.meta, color: "#8b949e" },
 
-  // Markdown syntax characters
-  { tag: tags.processingInstruction, color: "#636366" },
-  { tag: tags.meta, color: "#636366" },
+  // Blockquotes
+  { tag: tags.quote, color: "#7ee787" },
+
+  // Lists
+  { tag: tags.list, color: "#ffa657" },
 
   // Horizontal rule
-  { tag: tags.contentSeparator, color: "#48484a" },
+  { tag: tags.contentSeparator, color: "#79c0ff" },
 
-  // Code block language-specific tokens
-  { tag: tags.keyword, color: "#ff7ab2" },
-  { tag: tags.string, color: "#ff8170" },
-  { tag: tags.comment, color: "#7f8c8d", fontStyle: "italic" },
-  { tag: tags.number, color: "#d9c97c" },
-  { tag: tags.function(tags.variableName), color: "#b281eb" },
-  { tag: tags.definition(tags.variableName), color: "#b281eb" },
-  { tag: tags.typeName, color: "#6bdfff" },
-  { tag: tags.bool, color: "#ff7ab2" },
-  { tag: tags.operator, color: "#e5e5e7" },
-  { tag: tags.className, color: "#dabaff" },
-  { tag: tags.propertyName, color: "#e5e5e7" },
-  { tag: tags.attributeName, color: "#d9c97c" },
-  { tag: tags.attributeValue, color: "#ff8170" },
-  { tag: tags.regexp, color: "#ff8170" },
-  { tag: tags.tagName, color: "#ff7ab2" },
-  { tag: tags.labelName, color: "#e5e5e7" },
+  // Code syntax highlighting
+  { tag: tags.keyword, color: "#ff7b72" },
+  { tag: tags.string, color: "#a5d6ff" },
+  { tag: tags.comment, color: "#8b949e", fontStyle: "italic" },
+  { tag: tags.number, color: "#79c0ff" },
+  { tag: tags.function(tags.variableName), color: "#d2a8ff" },
+  { tag: tags.definition(tags.variableName), color: "#d2a8ff" },
+  { tag: tags.typeName, color: "#ffa657" },
+  { tag: tags.bool, color: "#79c0ff" },
+  { tag: tags.operator, color: "#c9d1d9" },
+  { tag: tags.className, color: "#ffa657" },
+  { tag: tags.propertyName, color: "#c9d1d9" },
+  { tag: tags.attributeName, color: "#ffa657" },
+  { tag: tags.attributeValue, color: "#a5d6ff" },
+  { tag: tags.regexp, color: "#a5d6ff" },
+  { tag: tags.tagName, color: "#7ee787" },
+  { tag: tags.labelName, color: "#c9d1d9" },
 ]);
 
-/**
- * Returns the syntax highlighting extension for the given theme variant.
- */
-export function markdownHighlighting(variant: "light" | "dark" = "light"): Extension {
-  return syntaxHighlighting(
-    variant === "dark" ? darkMarkdownStyle : lightMarkdownStyle,
-  );
-}
-
-/**
- * Both light and dark styles available for compartment switching.
- */
 export { lightMarkdownStyle, darkMarkdownStyle };
 
 /**
- * ViewPlugin that adds CSS classes to heading lines so the theme can
- * style them via `.cm-heading-1` etc.  This bridges lezer syntax tree
- * node types to DOM classes that EditorView.theme() rules can target.
+ * ViewPlugin that adds CSS classes to code block and blockquote lines
+ * for background/border styling via the theme.
  */
 export const headingLineClasses = ViewPlugin.fromClass(
   class {
     decorations: DecorationSet;
     constructor(view: EditorView) {
-      this.decorations = buildHeadingDecorations(view);
+      this.decorations = buildLineDecorations(view);
     }
     update(update: { docChanged: boolean; viewportChanged: boolean; view: EditorView }) {
       if (update.docChanged || update.viewportChanged) {
-        this.decorations = buildHeadingDecorations(update.view);
+        this.decorations = buildLineDecorations(update.view);
       }
     }
   },
   { decorations: (v) => v.decorations },
 );
 
-function buildHeadingDecorations(view: EditorView): DecorationSet {
-  const decorations: { from: number; to: number; decoration: Decoration }[] = [];
+function buildLineDecorations(view: EditorView): DecorationSet {
+  const decorations: { from: number; decoration: Decoration }[] = [];
 
   for (const { from, to } of view.visibleRanges) {
     syntaxTree(view.state).iterate({
       from,
       to,
       enter(node) {
-        if (node.name === "ATXHeading1" || node.name === "SetextHeading1") {
-          const line = view.state.doc.lineAt(node.from);
-          decorations.push({ from: line.from, to: line.from, decoration: Decoration.line({ class: "cm-heading-1" }) });
-        } else if (node.name === "ATXHeading2" || node.name === "SetextHeading2") {
-          const line = view.state.doc.lineAt(node.from);
-          decorations.push({ from: line.from, to: line.from, decoration: Decoration.line({ class: "cm-heading-2" }) });
-        } else if (node.name === "ATXHeading3") {
-          const line = view.state.doc.lineAt(node.from);
-          decorations.push({ from: line.from, to: line.from, decoration: Decoration.line({ class: "cm-heading-3" }) });
-        } else if (node.name === "ATXHeading4") {
-          const line = view.state.doc.lineAt(node.from);
-          decorations.push({ from: line.from, to: line.from, decoration: Decoration.line({ class: "cm-heading-4" }) });
-        } else if (node.name === "ATXHeading5") {
-          const line = view.state.doc.lineAt(node.from);
-          decorations.push({ from: line.from, to: line.from, decoration: Decoration.line({ class: "cm-heading-5" }) });
-        } else if (node.name === "ATXHeading6") {
-          const line = view.state.doc.lineAt(node.from);
-          decorations.push({ from: line.from, to: line.from, decoration: Decoration.line({ class: "cm-heading-6" }) });
-        } else if (node.name === "FencedCode" || node.name === "CodeBlock") {
-          // Add code-block class to each line in a fenced code block
+        if (node.name === "FencedCode" || node.name === "CodeBlock") {
           const startLine = view.state.doc.lineAt(node.from);
           const endLine = view.state.doc.lineAt(node.to);
           for (let i = startLine.number; i <= endLine.number; i++) {
-            const line = view.state.doc.line(i);
-            decorations.push({ from: line.from, to: line.from, decoration: Decoration.line({ class: "cm-code-block" }) });
+            const codeLine = view.state.doc.line(i);
+            decorations.push({ from: codeLine.from, decoration: Decoration.line({ class: "cm-code-block" }) });
           }
         } else if (node.name === "Blockquote") {
           const startLine = view.state.doc.lineAt(node.from);
           const endLine = view.state.doc.lineAt(node.to);
           for (let i = startLine.number; i <= endLine.number; i++) {
-            const line = view.state.doc.line(i);
-            decorations.push({ from: line.from, to: line.from, decoration: Decoration.line({ class: "cm-blockquote" }) });
+            const quoteLine = view.state.doc.line(i);
+            decorations.push({ from: quoteLine.from, decoration: Decoration.line({ class: "cm-blockquote" }) });
           }
         }
       },
     });
   }
 
-  // Sort and de-duplicate by position
   decorations.sort((a, b) => a.from - b.from);
   return Decoration.set(decorations.map((d) => d.decoration.range(d.from)));
 }

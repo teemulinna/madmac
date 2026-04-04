@@ -2,256 +2,97 @@ import { EditorView } from "@codemirror/view";
 import { Extension } from "@codemirror/state";
 import { Compartment } from "@codemirror/state";
 
-export type ThemeVariant = "light" | "dark";
+export type ThemeVariant = "light" | "dark" | "sepia";
 
-/**
- * Compartment for switching between light and dark themes at runtime.
- */
 export const themeCompartment = new Compartment();
+export const fontSizeCompartment = new Compartment();
+export const gutterCompartment = new Compartment();
 
-/**
- * Base editor theme applied to all variants.
- * Typography: system font, 16px, line-height 1.6, max-width 720px.
- */
 const baseTheme = EditorView.baseTheme({
   "&": {
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif",
-    fontSize: "16px",
-    lineHeight: "1.6",
+    fontFamily: "'SF Mono', ui-monospace, Menlo, Monaco, Consolas, 'Courier New', monospace",
+    fontSize: "14px",
+    lineHeight: "1.5",
+    fontKerning: "none",
   },
   ".cm-content": {
-    maxWidth: "720px",
-    margin: "0 auto",
-    padding: "24px 16px",
-    caretColor: "auto",
+    padding: "16px 0",
+    caretColor: "transparent",
   },
   ".cm-scroller": {
     overflow: "auto",
   },
   ".cm-focused .cm-cursor": {
     borderLeftWidth: "2px",
+    borderRadius: "1px",
   },
-  ".cm-gutters": {
-    display: "none",
+  ".cm-code-block": {
+    padding: "1px 0",
   },
 });
 
-/**
- * Light theme for macOS light appearance.
- */
+// --- Light ---
 const lightTheme = EditorView.theme(
   {
-    "&": {
-      backgroundColor: "#ffffff",
-      color: "#1d1d1f",
-    },
-    ".cm-content": {
-      caretColor: "#007aff",
-    },
-    ".cm-cursor": {
-      borderLeftColor: "#007aff",
-    },
-    ".cm-selectionBackground, ::selection": {
-      backgroundColor: "#b4d5fe",
-    },
-    ".cm-activeLine": {
-      backgroundColor: "transparent",
-    },
-    ".cm-line": {
-      padding: "0",
-    },
-    // Heading styles
-    ".cm-heading-1": {
-      fontSize: "2em",
-      fontWeight: "700",
-      lineHeight: "1.2",
-      marginBottom: "0.5em",
-      letterSpacing: "-0.02em",
-    },
-    ".cm-heading-2": {
-      fontSize: "1.5em",
-      fontWeight: "600",
-      lineHeight: "1.3",
-      marginBottom: "0.4em",
-      letterSpacing: "-0.01em",
-    },
-    ".cm-heading-3": {
-      fontSize: "1.25em",
-      fontWeight: "600",
-      lineHeight: "1.4",
-      marginBottom: "0.3em",
-    },
-    ".cm-heading-4": {
-      fontSize: "1.125em",
-      fontWeight: "600",
-      lineHeight: "1.4",
-    },
-    ".cm-heading-5": {
-      fontSize: "1.0625em",
-      fontWeight: "600",
-      lineHeight: "1.5",
-    },
-    ".cm-heading-6": {
-      fontSize: "1em",
-      fontWeight: "600",
-      lineHeight: "1.5",
-      color: "#6e6e73",
-    },
-    // Code blocks
-    ".cm-code-block": {
-      backgroundColor: "#f5f5f7",
-      borderRadius: "6px",
-      fontFamily: "'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace",
-      fontSize: "0.9em",
-      padding: "2px 0",
-    },
-    // Inline code
-    ".cm-inline-code": {
-      backgroundColor: "#f5f5f7",
-      borderRadius: "3px",
-      fontFamily: "'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace",
-      fontSize: "0.9em",
-      padding: "1px 4px",
-    },
-    // Links
-    ".cm-link": {
-      color: "#007aff",
-      textDecoration: "none",
-    },
-    ".cm-link:hover": {
-      textDecoration: "underline",
-    },
-    // Blockquotes
-    ".cm-blockquote": {
-      borderLeft: "3px solid #d1d1d6",
-      paddingLeft: "16px",
-      color: "#6e6e73",
-    },
-    // Tables
-    ".cm-table-header": {
-      fontWeight: "600",
-    },
+    "&": { backgroundColor: "#ffffff", color: "#24292f" },
+    ".cm-cursor": { borderLeftColor: "#0a69da" },
+    ".cm-selectionBackground, ::selection": { backgroundColor: "#add6ff" },
+    ".cm-activeLine": { backgroundColor: "#eaeef27f" },
+    ".cm-line": { padding: "0" },
+    ".cm-heading-1, .cm-heading-2, .cm-heading-3, .cm-heading-4, .cm-heading-5, .cm-heading-6": { color: "#0550ae" },
+    ".cm-code-block": { backgroundColor: "#f6f8fa", borderRadius: "4px" },
+    ".cm-blockquote": { color: "#116329" },
+    ".cm-gutters": { backgroundColor: "#ffffff", color: "#8c959f", borderRight: "none" },
   },
   { dark: false },
 );
 
-/**
- * Dark theme for macOS dark appearance.
- */
+// --- Dark ---
 const darkTheme = EditorView.theme(
   {
-    "&": {
-      backgroundColor: "#1e1e1e",
-      color: "#e5e5e7",
-    },
-    ".cm-content": {
-      caretColor: "#0a84ff",
-    },
-    ".cm-cursor": {
-      borderLeftColor: "#0a84ff",
-    },
-    ".cm-selectionBackground, ::selection": {
-      backgroundColor: "#3a3f47",
-    },
-    ".cm-activeLine": {
-      backgroundColor: "transparent",
-    },
-    ".cm-line": {
-      padding: "0",
-    },
-    // Heading styles
-    ".cm-heading-1": {
-      fontSize: "2em",
-      fontWeight: "700",
-      lineHeight: "1.2",
-      marginBottom: "0.5em",
-      letterSpacing: "-0.02em",
-    },
-    ".cm-heading-2": {
-      fontSize: "1.5em",
-      fontWeight: "600",
-      lineHeight: "1.3",
-      marginBottom: "0.4em",
-      letterSpacing: "-0.01em",
-    },
-    ".cm-heading-3": {
-      fontSize: "1.25em",
-      fontWeight: "600",
-      lineHeight: "1.4",
-      marginBottom: "0.3em",
-    },
-    ".cm-heading-4": {
-      fontSize: "1.125em",
-      fontWeight: "600",
-      lineHeight: "1.4",
-    },
-    ".cm-heading-5": {
-      fontSize: "1.0625em",
-      fontWeight: "600",
-      lineHeight: "1.5",
-    },
-    ".cm-heading-6": {
-      fontSize: "1em",
-      fontWeight: "600",
-      lineHeight: "1.5",
-      color: "#98989d",
-    },
-    // Code blocks
-    ".cm-code-block": {
-      backgroundColor: "#2c2c2e",
-      borderRadius: "6px",
-      fontFamily: "'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace",
-      fontSize: "0.9em",
-      padding: "2px 0",
-    },
-    // Inline code
-    ".cm-inline-code": {
-      backgroundColor: "#2c2c2e",
-      borderRadius: "3px",
-      fontFamily: "'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace",
-      fontSize: "0.9em",
-      padding: "1px 4px",
-    },
-    // Links
-    ".cm-link": {
-      color: "#0a84ff",
-      textDecoration: "none",
-    },
-    ".cm-link:hover": {
-      textDecoration: "underline",
-    },
-    // Blockquotes
-    ".cm-blockquote": {
-      borderLeft: "3px solid #48484a",
-      paddingLeft: "16px",
-      color: "#98989d",
-    },
-    // Tables
-    ".cm-table-header": {
-      fontWeight: "600",
-    },
+    "&": { backgroundColor: "#0d1116", color: "#c9d1d9" },
+    ".cm-cursor": { borderLeftColor: "#58a6ff" },
+    ".cm-selectionBackground, ::selection": { backgroundColor: "#264f78" },
+    ".cm-activeLine": { backgroundColor: "#6e76811a" },
+    ".cm-line": { padding: "0" },
+    ".cm-heading-1, .cm-heading-2, .cm-heading-3, .cm-heading-4, .cm-heading-5, .cm-heading-6": { color: "#79c0ff" },
+    ".cm-code-block": { backgroundColor: "#161b22", borderRadius: "4px" },
+    ".cm-blockquote": { color: "#7ee787" },
+    ".cm-gutters": { backgroundColor: "#0d1116", color: "#6e7681", borderRight: "none" },
   },
   { dark: true },
 );
 
-/**
- * Returns the theme extension for the given variant.
- */
+// --- Sepia (subtle warm white / "sunburn") ---
+const sepiaTheme = EditorView.theme(
+  {
+    "&": { backgroundColor: "#f5efe6", color: "#3b3228" },
+    ".cm-cursor": { borderLeftColor: "#a0522d" },
+    ".cm-selectionBackground, ::selection": { backgroundColor: "#e8dcc8" },
+    ".cm-activeLine": { backgroundColor: "#efe8dc80" },
+    ".cm-line": { padding: "0" },
+    ".cm-heading-1, .cm-heading-2, .cm-heading-3, .cm-heading-4, .cm-heading-5, .cm-heading-6": { color: "#8b4513" },
+    ".cm-code-block": { backgroundColor: "#efe8dc", borderRadius: "4px" },
+    ".cm-blockquote": { color: "#6b7f3a" },
+    ".cm-gutters": { backgroundColor: "#f5efe6", color: "#a09080", borderRight: "none" },
+  },
+  { dark: false },
+);
+
 export function getThemeExtension(variant: ThemeVariant): Extension {
-  return variant === "dark" ? darkTheme : lightTheme;
+  if (variant === "dark") return darkTheme;
+  if (variant === "sepia") return sepiaTheme;
+  return lightTheme;
 }
 
-/**
- * Returns all theme-related extensions, using the compartment for dynamic switching.
- */
 export function themeExtensions(variant: ThemeVariant = "light"): Extension {
   return [baseTheme, themeCompartment.of(getThemeExtension(variant))];
 }
 
-/**
- * Detect system preference for dark mode.
- * Falls back to "light" if matchMedia is unavailable.
- */
+export function fontSizeExtension(size: number): Extension {
+  return EditorView.theme({ "&": { fontSize: `${size}px` } });
+}
+
 export function detectSystemTheme(): ThemeVariant {
   if (typeof window !== "undefined" && window.matchMedia) {
     return window.matchMedia("(prefers-color-scheme: dark)").matches

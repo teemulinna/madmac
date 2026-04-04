@@ -120,8 +120,6 @@ export function renderMarkdownToHTML(markdown: string): string {
  */
 export const READING_MODE_CSS = `
   .reading-mode {
-    max-width: 720px;
-    margin: 0 auto;
     padding: 32px 48px;
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
     font-size: 16px;
