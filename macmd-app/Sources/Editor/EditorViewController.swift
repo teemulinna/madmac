@@ -97,11 +97,16 @@ final class EditorViewController: NSViewController, WKScriptMessageHandler {
     }
 
     private func loadEditorHTML() {
-        // Load editor.js from the bundle's editor/ subdirectory
+        // WKWebView's loadHTMLString doesn't reliably load local <script src="...">
+        // even with a file:// baseURL. Use loadFileURL with a real HTML file instead.
         guard let editorDir = Bundle.main.resourceURL?.appendingPathComponent("editor") else {
             return
         }
 
+        let indexURL = editorDir.appendingPathComponent("index.html")
+
+        // Write index.html to the editor directory if it doesn't exist
+        // (or always overwrite to ensure it's current)
         let html = """
         <!DOCTYPE html>
         <html>
@@ -109,14 +114,8 @@ final class EditorViewController: NSViewController, WKScriptMessageHandler {
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1">
             <style>
-                :root {
-                    color-scheme: light dark;
-                }
-                * {
-                    margin: 0;
-                    padding: 0;
-                    box-sizing: border-box;
-                }
+                :root { color-scheme: light dark; }
+                * { margin: 0; padding: 0; box-sizing: border-box; }
                 body {
                     font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
                     font-size: 16px;
@@ -128,22 +127,10 @@ final class EditorViewController: NSViewController, WKScriptMessageHandler {
                     padding: 24px 48px;
                     min-height: 100vh;
                 }
-                .cm-editor {
-                    height: 100vh;
-                    outline: none;
-                }
-                .cm-scroller {
-                    font-family: inherit;
-                    font-size: inherit;
-                    line-height: inherit;
-                }
-                .cm-content {
-                    font-family: inherit;
-                    padding: 24px 0;
-                }
-                .cm-line {
-                    padding: 0;
-                }
+                .cm-editor { height: 100vh; outline: none; }
+                .cm-scroller { font-family: inherit; font-size: inherit; line-height: inherit; }
+                .cm-content { font-family: inherit; padding: 24px 0; }
+                .cm-line { padding: 0; }
                 @media (prefers-color-scheme: dark) {
                     body { background: #1e1e1e; color: #d4d4d4; }
                 }
@@ -167,7 +154,7 @@ final class EditorViewController: NSViewController, WKScriptMessageHandler {
         </html>
         """
 
-        // Load with the editor directory as base URL so editor.js resolves
-        webView.loadHTMLString(html, baseURL: editorDir)
+        try? html.write(to: indexURL, atomically: true, encoding: .utf8)
+        webView.loadFileURL(indexURL, allowingReadAccessTo: editorDir)
     }
 }
