@@ -373,6 +373,11 @@ export function getTheme(): ThemeVariant {
   return currentTheme;
 }
 
+export function copyAsMarkdown(): void {
+  const md = view ? view.state.doc.toString() : rawContent;
+  navigator.clipboard.writeText(md);
+}
+
 export function getView(): EditorView | null {
   return view;
 }

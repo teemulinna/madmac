@@ -81,6 +81,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         editMenu.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
         editMenu.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
         editMenu.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        editMenu.addItem(.separator())
+        let copyMdItem = NSMenuItem(title: "Copy as Markdown", action: #selector(EditorViewController.copyAsMarkdown(_:)), keyEquivalent: "C")
+        copyMdItem.keyEquivalentModifierMask = [.command, .shift]
+        editMenu.addItem(copyMdItem)
         editMenuItem.submenu = editMenu
         mainMenu.addItem(editMenuItem)
 

@@ -94,6 +94,17 @@ final class EditorViewController: NSViewController, WKScriptMessageHandler {
         }
     }
 
+    // MARK: - Copy as Markdown
+
+    @objc func copyAsMarkdown(_ sender: Any?) {
+        webView.evaluateJavaScript("MacmdEditor.getContent()") { [weak self] result, error in
+            guard let markdown = result as? String else { return }
+            let pasteboard = NSPasteboard.general
+            pasteboard.clearContents()
+            pasteboard.setString(markdown, forType: .string)
+        }
+    }
+
     // MARK: - JS Bridge (for preferences)
 
     func evaluateJS(_ js: String) {

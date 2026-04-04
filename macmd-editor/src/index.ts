@@ -10,6 +10,7 @@ export {
   setFontSize,
   getFontSize,
   showLineNumbers,
+  copyAsMarkdown,
 } from "./editor";
 export type { EditorMode } from "./editor";
 export type { ThemeVariant } from "./theme";
