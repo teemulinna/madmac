@@ -3,6 +3,37 @@ import AppKit
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupMainMenu()
+        checkForUpdates()
+    }
+
+    private func checkForUpdates() {
+        guard let url = URL(string: "https://api.github.com/repos/teemulinna/macmd/releases/latest") else { return }
+        let current = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0"
+
+        URLSession.shared.dataTask(with: url) { data, _, _ in
+            guard let data = data,
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let tagName = json["tag_name"] as? String,
+                  let htmlUrl = json["html_url"] as? String else { return }
+
+            let latest = tagName.replacingOccurrences(of: "v", with: "")
+            guard latest.compare(current, options: .numeric) == .orderedDescending else { return }
+
+            DispatchQueue.main.async {
+                let alert = NSAlert()
+                alert.messageText = "Update Available"
+                alert.informativeText = "macmd v\(latest) is available (you have v\(current))."
+                alert.addButton(withTitle: "Download")
+                alert.addButton(withTitle: "Later")
+                alert.alertStyle = .informational
+
+                if alert.runModal() == .alertFirstButtonReturn {
+                    if let releaseURL = URL(string: htmlUrl) {
+                        NSWorkspace.shared.open(releaseURL)
+                    }
+                }
+            }
+        }.resume()
     }
 
     func applicationShouldOpenUntitledFile(_ sender: NSApplication) -> Bool {
