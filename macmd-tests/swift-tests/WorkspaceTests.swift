@@ -230,7 +230,7 @@ func testSidebarHasFileBrowserSection() {
     let outlineView = scrollView?.documentView as? NSOutlineView
     let rootCount = outlineView?.dataSource?.outlineView?(outlineView!, numberOfChildrenOfItem: nil) ?? 0
     // Should have 2 sections: "Open Files" and "Files"
-    assert(rootCount == 2, "Sidebar has 2 root sections (Open Files + Files)")
+    assert(rootCount == 3, "Sidebar has 3 root sections (Open Files + Recent + Files)")
 }
 
 // MARK: - Run Workspace Tests

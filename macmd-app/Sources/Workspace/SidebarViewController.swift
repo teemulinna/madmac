@@ -47,6 +47,10 @@ final class SidebarViewController: NSViewController, NSOutlineViewDataSource, NS
         title: "Open Files",
         icon: NSImage(systemSymbolName: "doc.text", accessibilityDescription: nil)
     )
+    private let recentFilesSection = SidebarSection(
+        title: "Recent",
+        icon: NSImage(systemSymbolName: "clock", accessibilityDescription: nil)
+    )
     private let fileBrowserSection = SidebarSection(
         title: "Files",
         icon: NSImage(systemSymbolName: "folder", accessibilityDescription: nil)
@@ -54,16 +58,28 @@ final class SidebarViewController: NSViewController, NSOutlineViewDataSource, NS
     private var fileWatcher: FileWatcher?
 
     private var sections: [SidebarSection] {
-        [openFilesSection, fileBrowserSection]
+        [openFilesSection, recentFilesSection, fileBrowserSection]
     }
 
     // MARK: - Public API
+
+    func refreshRecentFiles() {
+        let recentURLs = NSDocumentController.shared.recentDocumentURLs
+        let openURLs = Set(openFilesSection.children.compactMap { ($0 as? SidebarItem)?.url })
+        recentFilesSection.children = recentURLs
+            .filter { !openURLs.contains($0) }  // Exclude already-open files
+            .prefix(10)
+            .map { SidebarItem(name: $0.lastPathComponent, url: $0) }
+        outlineView?.reloadData()
+        outlineView?.expandItem(recentFilesSection)
+    }
 
     func addOpenFile(name: String, url: URL) {
         guard !openFilesSection.children.contains(where: { ($0 as? SidebarItem)?.url == url }) else { return }
         openFilesSection.children.append(SidebarItem(name: name, url: url))
         outlineView?.reloadData()
         outlineView?.expandItem(openFilesSection)
+        refreshRecentFiles()
 
         if fileWatcher == nil {
             let parentDir = url.deletingLastPathComponent()
@@ -163,7 +179,7 @@ final class SidebarViewController: NSViewController, NSOutlineViewDataSource, NS
 
     override func viewDidAppear() {
         super.viewDidAppear()
-        // Ensure tree is expanded after view is fully visible
+        refreshRecentFiles()
         outlineView?.reloadData()
         outlineView?.expandItem(nil, expandChildren: true)
     }

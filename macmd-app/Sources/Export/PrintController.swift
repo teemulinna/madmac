@@ -74,16 +74,18 @@ enum PrintController {
         }
 
         // 5. Compile with typst
-        let typstBinary = ProcessInfo.processInfo.environment["TYPST_BINARY"] ?? "/opt/homebrew/bin/typst"
+        guard let typstBinary = findTypstBinary() else {
+            NSLog("macmd: typst binary not found in any known location")
+            return nil
+        }
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: typstBinary)
         process.arguments = ["compile", typFile.path, pdfFile.path]
 
-        // Pass font paths if set
+        // Pass font paths — app launched via `open` has minimal environment
         var env = ProcessInfo.processInfo.environment
         if env["TYPST_FONT_PATHS"] == nil {
-            // Include system fonts
             env["TYPST_FONT_PATHS"] = "/System/Library/Fonts:/Library/Fonts"
         }
         process.environment = env
@@ -112,6 +114,48 @@ enum PrintController {
         }
 
         return pdfFile
+    }
+
+    /// Find the typst binary in common locations.
+    private static func findTypstBinary() -> String? {
+        // Check explicit env var first
+        if let envPath = ProcessInfo.processInfo.environment["TYPST_BINARY"],
+           FileManager.default.isExecutableFile(atPath: envPath) {
+            return envPath
+        }
+
+        // Common install locations
+        let candidates = [
+            "/opt/homebrew/bin/typst",     // Apple Silicon Homebrew
+            "/usr/local/bin/typst",        // Intel Homebrew
+            "/usr/bin/typst",              // System install
+            "\(NSHomeDirectory())/.cargo/bin/typst",  // Cargo install
+        ]
+
+        for path in candidates {
+            if FileManager.default.isExecutableFile(atPath: path) {
+                return path
+            }
+        }
+
+        // Last resort: try `which typst` via shell
+        let which = Process()
+        which.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+        which.arguments = ["which", "typst"]
+        let pipe = Pipe()
+        which.standardOutput = pipe
+        which.standardError = FileHandle.nullDevice
+        do {
+            try which.run()
+            which.waitUntilExit()
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            let path = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if !path.isEmpty && FileManager.default.isExecutableFile(atPath: path) {
+                return path
+            }
+        } catch {}
+
+        return nil
     }
 
     /// Show the PDF in Preview.app.
