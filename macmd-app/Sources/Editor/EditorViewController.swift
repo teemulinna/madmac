@@ -4,6 +4,7 @@ import WebKit
 final class EditorViewController: NSViewController, WKScriptMessageHandler {
     private var webView: WKWebView!
     private var isFluidMode = false
+    private var shouldStartInEditMode = false
     private var lineNumbersVisible = false
     // Loaded from UserDefaults on init. nil = follow system.
     private var userSelectedTheme: String? = {
@@ -12,6 +13,11 @@ final class EditorViewController: NSViewController, WKScriptMessageHandler {
     }()
     weak var document: MarkdownDocument?
 
+    override var preferredContentSize: NSSize {
+        get { NSSize(width: 1000, height: 700) }
+        set { }
+    }
+
     override func loadView() {
         let config = WKWebViewConfiguration()
         let userContentController = WKUserContentController()
@@ -19,7 +25,7 @@ final class EditorViewController: NSViewController, WKScriptMessageHandler {
         config.userContentController = userContentController
         config.preferences.setValue(true, forKey: "allowFileAccessFromFileURLs")
 
-        webView = WKWebView(frame: .zero, configuration: config)
+        webView = WKWebView(frame: NSRect(x: 0, y: 0, width: 1000, height: 700), configuration: config)
         webView.setValue(false, forKey: "drawsBackground")
 
         view = webView
@@ -94,15 +100,25 @@ final class EditorViewController: NSViewController, WKScriptMessageHandler {
         }
     }
 
-    // MARK: - Copy as Markdown
+    // MARK: - Copy
 
-    @objc func copyAsMarkdown(_ sender: Any?) {
-        webView.evaluateJavaScript("MacmdEditor.getContent()") { [weak self] result, error in
-            guard let markdown = result as? String else { return }
+    /// Cmd+Shift+C: copy selection as rich text (rendered HTML)
+    @objc func copyAsRichText(_ sender: Any?) {
+        webView.evaluateJavaScript("MacmdEditor.copySelectionAsRichText()") { result, _ in
+            guard let html = result as? String, !html.isEmpty else { return }
             let pasteboard = NSPasteboard.general
             pasteboard.clearContents()
-            pasteboard.setString(markdown, forType: .string)
+            if let data = html.data(using: .utf8) {
+                pasteboard.setData(data, forType: .html)
+            }
+            // Also set plain text version (stripped)
+            let stripped = html.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
+            pasteboard.setString(stripped, forType: .string)
         }
+    }
+
+    func startInEditMode() {
+        shouldStartInEditMode = true
     }
 
     // MARK: - JS Bridge (for preferences)
@@ -156,6 +172,12 @@ final class EditorViewController: NSViewController, WKScriptMessageHandler {
                 if UserDefaults.standard.bool(forKey: "macmd.lineNumbers") {
                     self.lineNumbersVisible = true
                     self.webView.evaluateJavaScript("MacmdEditor.showLineNumbers(true);")
+                }
+                // New file → edit mode
+                if self.shouldStartInEditMode {
+                    self.shouldStartInEditMode = false
+                    self.isFluidMode = true
+                    self.webView.evaluateJavaScript("MacmdEditor.setMode('fluid');")
                 }
             default:
                 break

@@ -292,6 +292,26 @@ export function createEditor(
   });
 
   view = new EditorView({ state, parent: cm6Container });
+
+  // Reading mode Cmd+C → copies selection as markdown
+  readingContainer.addEventListener("copy", (e: ClipboardEvent) => {
+    if (currentMode !== "reading") return;
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed) return;
+
+    const range = sel.getRangeAt(0);
+    const div = document.createElement("div");
+    div.appendChild(range.cloneContents());
+    const selectedHtml = div.innerHTML;
+    const md = htmlToMarkdown(selectedHtml);
+
+    if (md) {
+      e.preventDefault();
+      e.clipboardData?.setData("text/plain", md);
+      e.clipboardData?.setData("text/html", selectedHtml);
+    }
+  });
+
   showLayer(mode);
   notifyReady();
   return view;
@@ -373,9 +393,81 @@ export function getTheme(): ThemeVariant {
   return currentTheme;
 }
 
-export function copyAsMarkdown(): void {
-  const md = view ? view.state.doc.toString() : rawContent;
-  navigator.clipboard.writeText(md);
+/** Get the selected HTML from reading mode */
+export function copySelectionAsRichText(): string {
+  const sel = window.getSelection();
+  if (!sel || sel.isCollapsed) return "";
+  const range = sel.getRangeAt(0);
+  const div = document.createElement("div");
+  div.appendChild(range.cloneContents());
+  return div.innerHTML;
+}
+
+/** Convert HTML to markdown (simple, covers common elements) */
+function htmlToMarkdown(html: string): string {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+
+  function walk(node: Node): string {
+    if (node.nodeType === Node.TEXT_NODE) {
+      return node.textContent || "";
+    }
+    if (node.nodeType !== Node.ELEMENT_NODE) return "";
+    const el = node as HTMLElement;
+    const tag = el.tagName.toLowerCase();
+    const children = Array.from(el.childNodes).map(walk).join("");
+
+    switch (tag) {
+      case "h1": return `# ${children}\n\n`;
+      case "h2": return `## ${children}\n\n`;
+      case "h3": return `### ${children}\n\n`;
+      case "h4": return `#### ${children}\n\n`;
+      case "h5": return `##### ${children}\n\n`;
+      case "h6": return `###### ${children}\n\n`;
+      case "p": return `${children}\n\n`;
+      case "strong": case "b": return `**${children}**`;
+      case "em": case "i": return `*${children}*`;
+      case "del": case "s": return `~~${children}~~`;
+      case "code":
+        if (el.parentElement?.tagName === "PRE") return children;
+        return `\`${children}\``;
+      case "pre": {
+        const code = el.querySelector("code");
+        const lang = code?.className?.match(/language-(\w+)/)?.[1] || "";
+        const text = code?.textContent || children;
+        return `\`\`\`${lang}\n${text}\n\`\`\`\n\n`;
+      }
+      case "a": return `[${children}](${el.getAttribute("href") || ""})`;
+      case "img": return `![${el.getAttribute("alt") || ""}](${el.getAttribute("src") || ""})`;
+      case "blockquote": return children.split("\n").map(l => l ? `> ${l}` : ">").join("\n") + "\n\n";
+      case "ul": case "ol": return `${children}\n`;
+      case "li": {
+        const prefix = el.parentElement?.tagName === "OL"
+          ? `${Array.from(el.parentElement!.children).indexOf(el) + 1}. `
+          : "- ";
+        return `${prefix}${children.trim()}\n`;
+      }
+      case "hr": return "---\n\n";
+      case "br": return "\n";
+      case "table": return children;
+      case "thead": case "tbody": return children;
+      case "tr": {
+        const cells = Array.from(el.children).map(c => walk(c).trim());
+        const row = `| ${cells.join(" | ")} |`;
+        // Add header separator after thead tr
+        if (el.parentElement?.tagName === "THEAD") {
+          const sep = cells.map(() => "---").join(" | ");
+          return `${row}\n| ${sep} |\n`;
+        }
+        return `${row}\n`;
+      }
+      case "th": case "td": return children;
+      case "div": case "span": case "article": case "section":
+        return children;
+      default: return children;
+    }
+  }
+
+  return walk(doc.body).replace(/\n{3,}/g, "\n\n").trim();
 }
 
 export function getView(): EditorView | null {

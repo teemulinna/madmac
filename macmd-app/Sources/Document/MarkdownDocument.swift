@@ -9,12 +9,8 @@ extension UTType {
 
 @objc(MarkdownDocument)
 final class MarkdownDocument: NSDocument {
-    /// The current markdown content. Updated from the editor via JS->Swift bridge
-    /// whenever the user makes changes (contentChanged message).
     var content: String = ""
     private var editorViewController: EditorViewController?
-
-    // MARK: - NSDocument
 
     override class var autosavesInPlace: Bool { true }
 
@@ -31,7 +27,7 @@ final class MarkdownDocument: NSDocument {
         viewController.document = self
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 1200, height: 800),
+            contentRect: NSRect(x: 0, y: 0, width: 1000, height: 700),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
@@ -39,42 +35,44 @@ final class MarkdownDocument: NSDocument {
         window.contentViewController = viewController
         window.minSize = NSSize(width: 400, height: 300)
         window.title = displayName
-        window.isRestorable = false
-        // Defer frame setting to override macOS state restoration
-        DispatchQueue.main.async {
-            if let screen = NSScreen.main {
-                window.setFrame(screen.visibleFrame, display: true, animate: false)
-            }
-            window.makeKeyAndOrderFront(nil)
+        // Restore saved position for this file
+        let saveName = fileURL?.lastPathComponent ?? "macmd-untitled"
+        window.setFrameAutosaveName(saveName)
+
+        // Validate: if window is too small or off-screen, reset to default
+        let frame = window.frame
+        if frame.width < 500 || frame.height < 400 {
+            window.setContentSize(NSSize(width: 1000, height: 700))
+            window.center()
+        } else if let screen = NSScreen.main, !screen.visibleFrame.intersects(frame) {
+            window.center()
         }
 
         let windowController = NSWindowController(window: window)
         addWindowController(windowController)
 
         editorViewController = viewController
-        viewController.loadContent(content)
-    }
 
-    // MARK: - Reading
+        // New file (no content) → open in edit mode
+        // Existing file → open in reading mode (default)
+        if content.isEmpty {
+            viewController.startInEditMode()
+        }
+    }
 
     override func read(from data: Data, ofType typeName: String) throws {
         guard let text = String(data: data, encoding: .utf8) else {
             throw NSError(
                 domain: "com.macmd.error",
                 code: 1,
-                userInfo: [NSLocalizedDescriptionKey: "File is not valid UTF-8 encoded. macmd only supports UTF-8 files."]
+                userInfo: [NSLocalizedDescriptionKey: "File is not valid UTF-8 encoded."]
             )
         }
         content = text
         editorViewController?.loadContent(content)
     }
 
-    // MARK: - Writing
-
     override func data(ofType typeName: String) throws -> Data {
-        // content is kept in sync via the JS->Swift contentChanged bridge message,
-        // so we always have the latest content without needing to synchronously
-        // query the WKWebView (which would deadlock on the main thread).
         guard let data = content.data(using: .utf8) else {
             throw NSError(
                 domain: "com.macmd.error",
@@ -84,8 +82,6 @@ final class MarkdownDocument: NSDocument {
         }
         return data
     }
-
-    // MARK: - Mode Toggle
 
     @objc func toggleMode(_ sender: Any?) {
         editorViewController?.toggleMode()
