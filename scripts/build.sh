@@ -48,6 +48,12 @@ cp "$PROJECT_ROOT/macmd-app/Resources/editor/editor.js" "$RESOURCES/editor/edito
 [ -f "$PROJECT_ROOT/macmd-app/Resources/editor/editor.js.map" ] && \
     cp "$PROJECT_ROOT/macmd-app/Resources/editor/editor.js.map" "$RESOURCES/editor/editor.js.map"
 
+# Copy KaTeX fonts (required for math rendering)
+if [ -d "$PROJECT_ROOT/macmd-editor/node_modules/katex/dist/fonts" ]; then
+    mkdir -p "$RESOURCES/editor/fonts"
+    cp "$PROJECT_ROOT/macmd-editor/node_modules/katex/dist/fonts/"*.woff2 "$RESOURCES/editor/fonts/"
+fi
+
 # Copy asset catalog (if compiled)
 if [ -d "$PROJECT_ROOT/macmd-app/Resources/Assets.xcassets" ]; then
     # For now, just ensure the directory exists
