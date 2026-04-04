@@ -23,7 +23,7 @@ run-with-demo: build
 	open build/macmd.app --args "$(PWD)/test-files/demo.md"
 
 # ── Test ───────────────────────────────────────────
-test: test-rust test-editor test-smoke
+test: test-rust test-editor test-swift test-smoke
 
 test-rust:
 	cd macmd-core && cargo test
@@ -31,8 +31,14 @@ test-rust:
 test-editor:
 	cd macmd-editor && npx vitest run
 
+test-swift:
+	./scripts/test-swift.sh
+
 test-smoke:
 	./scripts/smoke-test.sh
+
+test-browser:
+	cd macmd-editor && npm run test-browser
 
 test-integration:
 	./scripts/integration-test.sh

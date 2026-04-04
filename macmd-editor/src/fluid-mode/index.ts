@@ -28,34 +28,41 @@ const clickHandler = ViewPlugin.fromClass(
   {
     eventHandlers: {
       mousedown(event: MouseEvent, view: EditorView) {
-        const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
-        if (pos === null) return false;
+        // Use setTimeout to process after CM6's own mousedown handling
+        // This prevents race conditions with CM6's focus/selection management
+        const x = event.clientX;
+        const y = event.clientY;
+        const metaKey = event.metaKey;
 
-        const block = findBlockAt(view.state, pos);
-        if (!block) {
-          // Clicked outside any block — clear all editing
-          clearAllEditing(view);
-          return false;
-        }
+        setTimeout(() => {
+          const pos = view.posAtCoords({ x, y });
+          if (pos === null) return;
 
-        const blockFrom = block.from;
-
-        if (event.metaKey) {
-          // Cmd+click: add this block to editing set (multi-block)
-          view.dispatch({
-            effects: addBlockEditingEffect.of(blockFrom),
-          });
-        } else {
-          // Regular click: clear others, toggle this block
-          const currentEditing = view.state.field(fluidModeState, false);
-          if (currentEditing && currentEditing.has(blockFrom)) {
-            // Already editing — let CM6 handle cursor placement
-            return false;
+          const block = findBlockAt(view.state, pos);
+          if (!block) {
+            clearAllEditing(view);
+            return;
           }
 
-          clearAllEditing(view);
-          toggleBlockEditing(view, blockFrom);
-        }
+          const blockFrom = block.from;
+
+          if (metaKey) {
+            // Cmd+click: add this block to editing set (multi-block)
+            view.dispatch({
+              effects: addBlockEditingEffect.of(blockFrom),
+            });
+          } else {
+            // Regular click: clear others, toggle this block
+            const currentEditing = view.state.field(fluidModeState, false);
+            if (currentEditing && currentEditing.has(blockFrom)) {
+              // Already editing — let CM6 handle cursor placement
+              return;
+            }
+
+            clearAllEditing(view);
+            toggleBlockEditing(view, blockFrom);
+          }
+        }, 0);
 
         return false; // Don't prevent default — let CM6 handle cursor
       },
