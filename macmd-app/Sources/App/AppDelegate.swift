@@ -7,7 +7,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func checkForUpdates() {
-        guard let url = URL(string: "https://api.github.com/repos/teemulinna/macmd/releases/latest") else { return }
+        guard let url = URL(string: "https://api.github.com/repos/teemulinna/MadMac/releases/latest") else { return }
         let current = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0"
 
         URLSession.shared.dataTask(with: url) { data, _, _ in
@@ -22,7 +22,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             DispatchQueue.main.async {
                 let alert = NSAlert()
                 alert.messageText = "Update Available"
-                alert.informativeText = "macmd v\(latest) is available (you have v\(current))."
+                alert.informativeText = "MadMac v\(latest) is available (you have v\(current))."
                 alert.addButton(withTitle: "Download")
                 alert.addButton(withTitle: "Later")
                 alert.alertStyle = .informational
@@ -76,7 +76,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             defer: false
         )
         window.contentViewController = prefsVC
-        window.title = "macmd Settings"
+        window.title = "MadMac Settings"
         window.center()
         window.isReleasedWhenClosed = false
         window.makeKeyAndOrderFront(nil)
@@ -89,11 +89,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // App menu
         let appMenuItem = NSMenuItem()
         let appMenu = NSMenu()
-        appMenu.addItem(withTitle: "About macmd", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+        appMenu.addItem(withTitle: "About MadMac", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
         appMenu.addItem(.separator())
         appMenu.addItem(withTitle: "Settings…", action: #selector(showPreferences(_:)), keyEquivalent: ",")
         appMenu.addItem(.separator())
-        appMenu.addItem(withTitle: "Quit macmd", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        appMenu.addItem(withTitle: "Quit MadMac", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         appMenuItem.submenu = appMenu
         mainMenu.addItem(appMenuItem)
 

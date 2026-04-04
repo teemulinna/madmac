@@ -8,7 +8,7 @@ final class EditorViewController: NSViewController, WKScriptMessageHandler {
     private var lineNumbersVisible = false
     // Loaded from UserDefaults on init. nil = follow system.
     private var userSelectedTheme: String? = {
-        let saved = UserDefaults.standard.string(forKey: "macmd.theme")
+        let saved = UserDefaults.standard.string(forKey: "MadMac.theme")
         return (saved == "auto" || saved == nil) ? nil : saved
     }()
     weak var document: MarkdownDocument?
@@ -16,7 +16,7 @@ final class EditorViewController: NSViewController, WKScriptMessageHandler {
     override func loadView() {
         let config = WKWebViewConfiguration()
         let userContentController = WKUserContentController()
-        userContentController.add(self, name: "macmd")
+        userContentController.add(self, name: "MadMac")
         config.userContentController = userContentController
         config.preferences.setValue(true, forKey: "allowFileAccessFromFileURLs")
 
@@ -160,11 +160,11 @@ final class EditorViewController: NSViewController, WKScriptMessageHandler {
                 let theme = self.userSelectedTheme ?? self.systemTheme()
                 self.applyTheme(theme)
 
-                let fontSize = UserDefaults.standard.integer(forKey: "macmd.fontSize")
+                let fontSize = UserDefaults.standard.integer(forKey: "MadMac.fontSize")
                 if fontSize > 0 {
                     self.webView.evaluateJavaScript("MacmdEditor.setFontSize(\(fontSize));")
                 }
-                if UserDefaults.standard.bool(forKey: "macmd.lineNumbers") {
+                if UserDefaults.standard.bool(forKey: "MadMac.lineNumbers") {
                     self.lineNumbersVisible = true
                     self.webView.evaluateJavaScript("MacmdEditor.showLineNumbers(true);")
                 }
@@ -231,7 +231,7 @@ final class EditorViewController: NSViewController, WKScriptMessageHandler {
                     '',
                     'reading'
                 );
-                window.webkit.messageHandlers.macmd.postMessage({ action: 'ready' });
+                window.webkit.messageHandlers.MadMac.postMessage({ action: 'ready' });
             </script>
         </body>
         </html>

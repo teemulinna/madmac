@@ -1,4 +1,4 @@
-// Agion brand preset for macmd PDF export
+// Agion brand preset for MadMac PDF export
 // Based on Agion platform brand guidelines
 
 #let brand-primary = rgb("#1a1a2e")
@@ -6,11 +6,11 @@
 #let brand-light = rgb("#f0f4f8")
 #let brand-muted = rgb("#6b7280")
 
-#set document(author: "macmd")
+#set document(author: "MadMac")
 #set page(
   paper: "a4",
   margin: 2cm,
-  header: align(right, text(8pt, fill: brand-muted)[macmd]),
+  header: align(right, text(8pt, fill: brand-muted)[MadMac]),
   footer: align(center, text(8pt, fill: brand-muted)[#counter(page).display("1 / 1", both: true)]),
 )
 

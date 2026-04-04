@@ -69,13 +69,13 @@ enum PrintController {
         do {
             try fullTypst.write(to: typFile, atomically: true, encoding: .utf8)
         } catch {
-            NSLog("macmd: Failed to write .typ file: \(error)")
+            NSLog("MadMac: Failed to write .typ file: \(error)")
             return nil
         }
 
         // 5. Compile with typst
         guard let typstBinary = findTypstBinary() else {
-            NSLog("macmd: typst binary not found in any known location")
+            NSLog("MadMac: typst binary not found in any known location")
             return nil
         }
 
@@ -97,19 +97,19 @@ enum PrintController {
             try process.run()
             process.waitUntilExit()
         } catch {
-            NSLog("macmd: Failed to run typst: \(error)")
+            NSLog("MadMac: Failed to run typst: \(error)")
             return nil
         }
 
         if process.terminationStatus != 0 {
             let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
             let errorMsg = String(data: errorData, encoding: .utf8) ?? "unknown error"
-            NSLog("macmd: typst compile failed: \(errorMsg)")
+            NSLog("MadMac: typst compile failed: \(errorMsg)")
             return nil
         }
 
         guard FileManager.default.fileExists(atPath: pdfFile.path) else {
-            NSLog("macmd: PDF file not created")
+            NSLog("MadMac: PDF file not created")
             return nil
         }
 

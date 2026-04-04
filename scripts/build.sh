@@ -1,17 +1,17 @@
 #!/bin/bash
 set -euo pipefail
 
-# macmd build script — works with CommandLineTools (no Xcode.app needed)
+# MadMac build script — works with CommandLineTools (no Xcode.app needed)
 # Creates a proper .app bundle with Info.plist and Resources
 
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BUILD_DIR="$PROJECT_ROOT/build"
-APP_BUNDLE="$BUILD_DIR/macmd.app"
+APP_BUNDLE="$BUILD_DIR/MadMac.app"
 CONTENTS="$APP_BUNDLE/Contents"
 MACOS="$CONTENTS/MacOS"
 RESOURCES="$CONTENTS/Resources"
 
-echo "==> Building macmd..."
+echo "==> Building MadMac..."
 
 # 1. Build CM6 editor bundle (if not already built)
 EDITOR_JS="$PROJECT_ROOT/macmd-app/Resources/editor/editor.js"
@@ -33,7 +33,7 @@ swiftc \
     -framework WebKit \
     -framework UniformTypeIdentifiers \
     -O \
-    -o "$MACOS/macmd" \
+    -o "$MACOS/MadMac" \
     $SWIFT_FILES
 
 # 3. Create .app bundle structure

@@ -25,7 +25,7 @@ final class WorkspaceWindowController: NSWindowController {
         window.toolbarStyle = .unified
 
         // Add an empty toolbar so the title area integrates properly
-        let toolbar = NSToolbar(identifier: "macmd.toolbar")
+        let toolbar = NSToolbar(identifier: "madmac.toolbar")
         toolbar.displayMode = .iconOnly
         // toolbar.showsBaselineSeparator — deprecated in macOS 15
         window.toolbar = toolbar
@@ -48,7 +48,7 @@ final class WorkspaceWindowController: NSWindowController {
 
         // Native tabs: documents open as tabs in the same window
         window.tabbingMode = .preferred
-        window.tabbingIdentifier = NSWindow.TabbingIdentifier("com.macmd.workspace")
+        window.tabbingIdentifier = NSWindow.TabbingIdentifier("com.madmac.workspace")
     }
 
     required init?(coder: NSCoder) {

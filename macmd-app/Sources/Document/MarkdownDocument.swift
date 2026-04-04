@@ -32,7 +32,7 @@ final class MarkdownDocument: NSDocument {
         window.title = displayName
 
         // Restore saved position for this file
-        let saveName = fileURL?.lastPathComponent ?? "macmd-untitled"
+        let saveName = fileURL?.lastPathComponent ?? "madmac-untitled"
         window.setFrameAutosaveName(saveName)
 
         // Validate: if window is too small or off-screen, reset to default
@@ -74,7 +74,7 @@ final class MarkdownDocument: NSDocument {
     override func read(from data: Data, ofType typeName: String) throws {
         guard let text = String(data: data, encoding: .utf8) else {
             throw NSError(
-                domain: "com.macmd.error",
+                domain: "com.madmac.error",
                 code: 1,
                 userInfo: [NSLocalizedDescriptionKey: "File is not valid UTF-8 encoded."]
             )
@@ -86,7 +86,7 @@ final class MarkdownDocument: NSDocument {
     override func data(ofType typeName: String) throws -> Data {
         guard let data = content.data(using: .utf8) else {
             throw NSError(
-                domain: "com.macmd.error",
+                domain: "com.madmac.error",
                 code: 2,
                 userInfo: [NSLocalizedDescriptionKey: "Failed to encode as UTF-8"]
             )

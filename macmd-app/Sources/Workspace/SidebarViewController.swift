@@ -100,7 +100,7 @@ final class SidebarViewController: NSViewController, NSOutlineViewDataSource, NS
         }
         fileWatcher?.start()
         refreshFileBrowser()
-        UserDefaults.standard.set(directory.path, forKey: "macmd.fileBrowserRoot")
+        UserDefaults.standard.set(directory.path, forKey: "madmac.fileBrowserRoot")
     }
 
     private func refreshFileBrowser() {

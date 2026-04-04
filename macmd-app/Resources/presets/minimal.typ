@@ -1,7 +1,7 @@
-// Minimal preset for macmd PDF export
+// Minimal preset for MadMac PDF export
 // Clean, no branding, optimized for readability
 
-#set document(author: "macmd")
+#set document(author: "MadMac")
 #set page(
   paper: "a4",
   margin: 2.5cm,

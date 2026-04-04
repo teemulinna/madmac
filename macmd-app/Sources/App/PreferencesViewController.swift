@@ -13,7 +13,7 @@ final class PreferencesViewController: NSViewController {
         view = container
 
         // Title
-        let titleLabel = NSTextField(labelWithString: "macmd Settings")
+        let titleLabel = NSTextField(labelWithString: "MadMac Settings")
         titleLabel.font = .boldSystemFont(ofSize: 16)
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(titleLabel)
@@ -28,7 +28,7 @@ final class PreferencesViewController: NSViewController {
         themePopup.target = self
         themePopup.action = #selector(themeChanged(_:))
         // Restore saved preference
-        let savedTheme = UserDefaults.standard.string(forKey: "macmd.theme") ?? "auto"
+        let savedTheme = UserDefaults.standard.string(forKey: "MadMac.theme") ?? "auto"
         switch savedTheme {
         case "light": themePopup.selectItem(withTitle: "Light")
         case "dark": themePopup.selectItem(withTitle: "Dark")
@@ -42,7 +42,7 @@ final class PreferencesViewController: NSViewController {
         fontLabel.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(fontLabel)
 
-        let savedSize = UserDefaults.standard.integer(forKey: "macmd.fontSize")
+        let savedSize = UserDefaults.standard.integer(forKey: "MadMac.fontSize")
         let fontSize = savedSize > 0 ? savedSize : 14
 
         fontSizeLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -61,14 +61,14 @@ final class PreferencesViewController: NSViewController {
 
         // Line numbers
         lineNumbersCheckbox.translatesAutoresizingMaskIntoConstraints = false
-        lineNumbersCheckbox.state = UserDefaults.standard.bool(forKey: "macmd.lineNumbers") ? .on : .off
+        lineNumbersCheckbox.state = UserDefaults.standard.bool(forKey: "MadMac.lineNumbers") ? .on : .off
         lineNumbersCheckbox.target = self
         lineNumbersCheckbox.action = #selector(lineNumbersChanged(_:))
         container.addSubview(lineNumbersCheckbox)
 
         // Spell check
         spellCheckCheckbox.translatesAutoresizingMaskIntoConstraints = false
-        spellCheckCheckbox.state = UserDefaults.standard.bool(forKey: "macmd.spellCheck") ? .on : .off
+        spellCheckCheckbox.state = UserDefaults.standard.bool(forKey: "MadMac.spellCheck") ? .on : .off
         spellCheckCheckbox.target = self
         spellCheckCheckbox.action = #selector(spellCheckChanged(_:))
         container.addSubview(spellCheckCheckbox)
@@ -114,26 +114,26 @@ final class PreferencesViewController: NSViewController {
         case "Sunburn": theme = "sepia"
         default: theme = "auto"
         }
-        UserDefaults.standard.set(theme, forKey: "macmd.theme")
+        UserDefaults.standard.set(theme, forKey: "MadMac.theme")
         applyToAllEditors("setThemeFromPrefs", value: theme)
     }
 
     @objc private func fontSizeChanged(_ sender: NSStepper) {
         let size = sender.integerValue
         fontSizeLabel.stringValue = "\(size) px"
-        UserDefaults.standard.set(size, forKey: "macmd.fontSize")
+        UserDefaults.standard.set(size, forKey: "MadMac.fontSize")
         applyToAllEditors("setFontSize", value: "\(size)")
     }
 
     @objc private func lineNumbersChanged(_ sender: NSButton) {
         let show = sender.state == .on
-        UserDefaults.standard.set(show, forKey: "macmd.lineNumbers")
+        UserDefaults.standard.set(show, forKey: "MadMac.lineNumbers")
         applyToAllEditors("showLineNumbers", value: show ? "true" : "false")
     }
 
     @objc private func spellCheckChanged(_ sender: NSButton) {
         let on = sender.state == .on
-        UserDefaults.standard.set(on, forKey: "macmd.spellCheck")
+        UserDefaults.standard.set(on, forKey: "MadMac.spellCheck")
         // Spell check is handled at WKWebView level, not JS
     }
 

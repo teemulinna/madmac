@@ -1,13 +1,13 @@
 #!/bin/bash
 set -euo pipefail
 
-# macmd BDD Integration Tests
-# Real tests against the ACTUAL macmd.app — not mocks, not stubs.
-# Maps key Gherkin scenarios from macmd-tests/features/ to executable tests.
+# MadMac BDD Integration Tests
+# Real tests against the ACTUAL MadMac.app — not mocks, not stubs.
+# Maps key Gherkin scenarios from MadMac-tests/features/ to executable tests.
 
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-APP="$PROJECT_ROOT/build/macmd.app"
-BINARY="$APP/Contents/MacOS/macmd"
+APP="$PROJECT_ROOT/build/MadMac.app"
+BINARY="$APP/Contents/MacOS/MadMac"
 TEST_DIR="$PROJECT_ROOT/test-files/integration"
 PASS=0
 FAIL=0
@@ -82,7 +82,7 @@ assert_file_contains() {
 get_window_count() {
     osascript -e '
         tell application "System Events"
-            tell process "macmd"
+            tell process "MadMac"
                 return count of windows
             end tell
         end tell
@@ -92,7 +92,7 @@ get_window_count() {
 get_front_window_title() {
     osascript -e '
         tell application "System Events"
-            tell process "macmd"
+            tell process "MadMac"
                 return name of front window
             end tell
         end tell
@@ -102,7 +102,7 @@ get_front_window_title() {
 get_all_window_titles() {
     osascript -e '
         tell application "System Events"
-            tell process "macmd"
+            tell process "MadMac"
                 return name of every window
             end tell
         end tell
@@ -113,7 +113,7 @@ get_menu_items() {
     local menu_name="$1"
     osascript -e "
         tell application \"System Events\"
-            tell process \"macmd\"
+            tell process \"MadMac\"
                 return name of every menu item of menu \"$menu_name\" of menu bar 1
             end tell
         end tell
@@ -125,7 +125,7 @@ send_keystroke() {
     local modifier="$2"
     osascript -e "
         tell application \"System Events\"
-            tell process \"macmd\"
+            tell process \"MadMac\"
                 set frontmost to true
                 keystroke \"$key\" using $modifier
             end tell
@@ -136,7 +136,7 @@ send_keystroke() {
 close_all_windows() {
     osascript -e '
         tell application "System Events"
-            tell process "macmd"
+            tell process "MadMac"
                 repeat with w in (every window)
                     try
                         click button 1 of w
@@ -152,8 +152,8 @@ close_all_windows() {
 
 setup() {
     mkdir -p "$TEST_DIR"
-    # Kill any existing macmd instances
-    pkill -x macmd 2>/dev/null || true
+    # Kill any existing MadMac instances
+    pkill -x MadMac 2>/dev/null || true
     sleep 1
 }
 
@@ -166,7 +166,7 @@ launch_app() {
     if [ "${MACMD_HEADLESS:-0}" = "1" ]; then
         osascript -e '
             tell application "System Events"
-                tell process "macmd"
+                tell process "MadMac"
                     set visible to false
                 end tell
             end tell
@@ -174,7 +174,7 @@ launch_app() {
     else
         osascript -e '
             tell application "System Events"
-                tell process "macmd"
+                tell process "MadMac"
                     set frontmost to true
                 end tell
             end tell
@@ -188,7 +188,7 @@ cleanup() {
         kill "$MACMD_PID" 2>/dev/null || true
         wait "$MACMD_PID" 2>/dev/null || true
     fi
-    pkill -x macmd 2>/dev/null || true
+    pkill -x MadMac 2>/dev/null || true
     # Clean up test files
     rm -rf "$TEST_DIR"
 }
@@ -197,10 +197,10 @@ trap cleanup EXIT
 # ── Build ─────────────────────────────────────────
 bold ""
 bold "============================================"
-bold "  macmd BDD Integration Tests"
+bold "  MadMac BDD Integration Tests"
 bold "============================================"
 bold ""
-bold "Building macmd..."
+bold "Building MadMac..."
 "$PROJECT_ROOT/scripts/build.sh" >/dev/null 2>&1
 green "  Build complete."
 bold ""
@@ -213,7 +213,7 @@ bold ""
 
 # ==================================================
 # Feature: Ikkunan koon muuttaminen
-#   (from macmd-tests/features/window-resize.feature)
+#   (from MadMac-tests/features/window-resize.feature)
 # ==================================================
 bold "Feature: Window resizing"
 bold ""
@@ -232,7 +232,7 @@ sleep 4
 
 osascript -e '
     tell application "System Events"
-        tell process "macmd"
+        tell process "MadMac"
             set frontmost to true
         end tell
     end tell
@@ -242,7 +242,7 @@ sleep 1
 # Get initial size
 INITIAL_SIZE=$(osascript -e '
     tell application "System Events"
-        tell process "macmd"
+        tell process "MadMac"
             return size of front window
         end tell
     end tell
@@ -251,7 +251,7 @@ INITIAL_SIZE=$(osascript -e '
 # Resize to 700x500
 osascript -e '
     tell application "System Events"
-        tell process "macmd"
+        tell process "MadMac"
             set size of front window to {700, 500}
         end tell
     end tell
@@ -260,7 +260,7 @@ sleep 1
 
 NEW_SIZE=$(osascript -e '
     tell application "System Events"
-        tell process "macmd"
+        tell process "MadMac"
             return size of front window
         end tell
     end tell
@@ -280,7 +280,7 @@ assert_equals "Window resized to ~700px wide" "yes" "$RESIZE_OK"
 # Resize back to something else to confirm it's not stuck
 osascript -e '
     tell application "System Events"
-        tell process "macmd"
+        tell process "MadMac"
             set size of front window to {900, 600}
         end tell
     end tell
@@ -289,7 +289,7 @@ sleep 1
 
 SECOND_SIZE=$(osascript -e '
     tell application "System Events"
-        tell process "macmd"
+        tell process "MadMac"
             return size of front window
         end tell
     end tell
@@ -311,7 +311,7 @@ dim "  Scenario: Window respects minimum size"
 
 osascript -e '
     tell application "System Events"
-        tell process "macmd"
+        tell process "MadMac"
             set size of front window to {200, 150}
         end tell
     end tell
@@ -320,7 +320,7 @@ sleep 1
 
 MIN_SIZE=$(osascript -e '
     tell application "System Events"
-        tell process "macmd"
+        tell process "MadMac"
             return size of front window
         end tell
     end tell
@@ -336,7 +336,7 @@ bold ""
 
 # ==================================================
 # Feature: Opening markdown files
-#   (from macmd-tests/features/opening-files.feature)
+#   (from MadMac-tests/features/opening-files.feature)
 # ==================================================
 bold "Feature: Opening markdown files"
 bold ""
@@ -353,10 +353,10 @@ MD
 open -a "$APP" "$TEST_DIR/hello.md"
 sleep 4
 
-# Ensure macmd is frontmost so AppleScript can query windows
+# Ensure MadMac is frontmost so AppleScript can query windows
 osascript -e '
     tell application "System Events"
-        tell process "macmd"
+        tell process "MadMac"
             set frontmost to true
         end tell
     end tell
@@ -393,7 +393,7 @@ sleep 3
 
 osascript -e '
     tell application "System Events"
-        tell process "macmd"
+        tell process "MadMac"
             set frontmost to true
         end tell
     end tell
@@ -464,7 +464,7 @@ dim "  Scenario: Cmd+N creates new tab"
 
 osascript -e '
     tell application "System Events"
-        tell process "macmd"
+        tell process "MadMac"
             set frontmost to true
         end tell
     end tell
@@ -499,7 +499,7 @@ bold ""
 
 # ==================================================
 # Feature: Reading Mode
-#   (from macmd-tests/features/reading-mode.feature)
+#   (from MadMac-tests/features/reading-mode.feature)
 # ==================================================
 bold "Feature: Reading mode"
 bold ""
@@ -530,7 +530,7 @@ bold ""
 
 # ==================================================
 # Feature: File saving and autosave
-#   (from macmd-tests/features/file-saving.feature)
+#   (from MadMac-tests/features/file-saving.feature)
 # ==================================================
 bold "Feature: File saving and autosave"
 bold ""
@@ -569,7 +569,7 @@ bold ""
 dim "  Scenario: Autosave is enabled in document class"
 
 # We verify the Swift source declares autosavesInPlace = true
-SWIFT_DOC="$PROJECT_ROOT/macmd-app/Sources/Document/MarkdownDocument.swift"
+SWIFT_DOC="$PROJECT_ROOT/MadMac-app/Sources/Document/MarkdownDocument.swift"
 assert_file_contains "autosavesInPlace is true" "$SWIFT_DOC" "autosavesInPlace.*true"
 bold ""
 
@@ -632,7 +632,7 @@ bold ""
 
 # ==================================================
 # Feature: Theme and appearance
-#   (from macmd-tests/features/theme-appearance.feature)
+#   (from MadMac-tests/features/theme-appearance.feature)
 # ==================================================
 bold "Feature: Theme and appearance"
 bold ""
@@ -640,7 +640,7 @@ bold ""
 dim "  Scenario: App respects system theme without crashing"
 
 # Verify the theme observation code exists in the source
-EDITOR_VC="$PROJECT_ROOT/macmd-app/Sources/Editor/EditorViewController.swift"
+EDITOR_VC="$PROJECT_ROOT/MadMac-app/Sources/Editor/EditorViewController.swift"
 assert_file_contains "System theme detection exists" "$EDITOR_VC" "darkAqua"
 assert_file_contains "Theme JS bridge exists" "$EDITOR_VC" "setTheme"
 assert "App stable with theme system" kill -0 "$MACMD_PID"
@@ -675,7 +675,7 @@ bold ""
 
 # ==================================================
 # Feature: Fluid Mode inline editing
-#   (from macmd-tests/features/fluid-mode-editing.feature)
+#   (from MadMac-tests/features/fluid-mode-editing.feature)
 # ==================================================
 bold "Feature: Fluid mode editing (Cmd+E toggle)"
 bold ""
@@ -697,10 +697,10 @@ MD
 open -a "$APP" "$TEST_DIR/fluid-mode.md"
 sleep 3
 
-# Make sure macmd is frontmost
+# Make sure MadMac is frontmost
 osascript -e '
     tell application "System Events"
-        tell process "macmd"
+        tell process "MadMac"
             set frontmost to true
         end tell
     end tell
@@ -730,7 +730,7 @@ bold ""
 
 # ==================================================
 # Feature: Workspace layout with sidebar
-#   (from macmd-tests/features/workspace-layout.feature)
+#   (from MadMac-tests/features/workspace-layout.feature)
 # ==================================================
 bold "Feature: Workspace layout with sidebar"
 bold ""
@@ -750,7 +750,7 @@ sleep 4
 
 osascript -e '
     tell application "System Events"
-        tell process "macmd"
+        tell process "MadMac"
             set frontmost to true
         end tell
     end tell
@@ -821,7 +821,7 @@ dim "  Scenario: App has expected menus"
 
 MENUS=$(osascript -e '
     tell application "System Events"
-        tell process "macmd"
+        tell process "MadMac"
             return name of every menu of menu bar 1
         end tell
     end tell
@@ -961,7 +961,7 @@ sleep 3
 assert "App opens mermaid file without crash" kill -0 "$MACMD_PID"
 
 # Check if the window shows the file
-MERMAID_WINDOW=$(osascript -e 'tell application "System Events" to tell process "macmd" to get name of windows' 2>&1 || echo "")
+MERMAID_WINDOW=$(osascript -e 'tell application "System Events" to tell process "MadMac" to get name of windows' 2>&1 || echo "")
 assert_contains "Window opened for mermaid file" "$MERMAID_WINDOW" "mermaid"
 
 bold ""
