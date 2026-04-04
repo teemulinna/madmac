@@ -4,6 +4,8 @@
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
+	<key>CFBundleDisplayName</key>
+	<string>macmd</string>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
@@ -11,8 +13,6 @@
 			<string>Markdown Document</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
-			<key>NSDocumentClass</key>
-			<string>MarkdownDocument</string>
 			<key>LSHandlerRank</key>
 			<string>Default</string>
 			<key>LSItemContentTypes</key>
@@ -20,24 +20,24 @@
 				<string>net.daringfireball.markdown</string>
 				<string>public.plain-text</string>
 			</array>
+			<key>NSDocumentClass</key>
+			<string>MarkdownDocument</string>
 		</dict>
 	</array>
-	<key>CFBundleIconFile</key>
-	<string>AppIcon</string>
 	<key>CFBundleExecutable</key>
 	<string>macmd</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.macmd.app</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
 	<string>macmd</string>
-	<key>CFBundleDisplayName</key>
-	<string>macmd</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.0</string>
+	<string>0.1.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
 	<key>LSMinimumSystemVersion</key>
