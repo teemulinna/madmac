@@ -24,6 +24,8 @@ import {
   notifyThemeChanged,
 } from "./bridge";
 import { fluidMode } from "./fluid-mode";
+import { mermaidExtension } from "./diagram-widget";
+import { mathExtension } from "./math-widget";
 
 export type EditorMode = "reading" | "fluid";
 
@@ -89,6 +91,8 @@ export function createEditor(
       editableCompartment.of(modeExts.editable),
       readOnlyCompartment.of(modeExts.readOnly),
       fluidModeCompartment.of(mode === "fluid" ? fluidMode() : []),
+      mermaidExtension(),
+      mathExtension(),
       contentChangeNotifier(),
     ],
   });
