@@ -13,11 +13,6 @@ final class EditorViewController: NSViewController, WKScriptMessageHandler {
     }()
     weak var document: MarkdownDocument?
 
-    override var preferredContentSize: NSSize {
-        get { NSSize(width: 1000, height: 700) }
-        set { }
-    }
-
     override func loadView() {
         let config = WKWebViewConfiguration()
         let userContentController = WKUserContentController()

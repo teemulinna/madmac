@@ -26,38 +26,49 @@ final class MarkdownDocument: NSDocument {
         let viewController = EditorViewController()
         viewController.document = self
 
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 1000, height: 700),
-            styleMask: [.titled, .closable, .miniaturizable, .resizable],
-            backing: .buffered,
-            defer: false
-        )
-        window.contentViewController = viewController
-        window.minSize = NSSize(width: 400, height: 300)
+        let workspaceWC = WorkspaceWindowController(editorViewController: viewController)
+        guard let window = workspaceWC.window else { return }
+
         window.title = displayName
+
         // Restore saved position for this file
         let saveName = fileURL?.lastPathComponent ?? "macmd-untitled"
         window.setFrameAutosaveName(saveName)
 
         // Validate: if window is too small or off-screen, reset to default
         let frame = window.frame
-        if frame.width < 500 || frame.height < 400 {
+        if frame.width < 600 || frame.height < 400 {
             window.setContentSize(NSSize(width: 1000, height: 700))
             window.center()
         } else if let screen = NSScreen.main, !screen.visibleFrame.intersects(frame) {
             window.center()
         }
 
-        let windowController = NSWindowController(window: window)
-        addWindowController(windowController)
-
+        addWindowController(workspaceWC)
         editorViewController = viewController
+
+        // Register in sidebar's open files list
+        let fileName = fileURL?.lastPathComponent ?? "Untitled"
+        let fileURL = fileURL ?? URL(fileURLWithPath: "/dev/null")
+        workspaceWC.sidebarViewController.addOpenFile(name: fileName, url: fileURL)
 
         // New file (no content) → open in edit mode
         // Existing file → open in reading mode (default)
         if content.isEmpty {
             viewController.startInEditMode()
         }
+    }
+
+    override func close() {
+        // Remove from sidebar's open files list
+        if let url = fileURL {
+            for wc in windowControllers {
+                if let workspaceWC = wc as? WorkspaceWindowController {
+                    workspaceWC.sidebarViewController.removeOpenFile(url: url)
+                }
+            }
+        }
+        super.close()
     }
 
     override func read(from data: Data, ofType typeName: String) throws {
@@ -85,5 +96,10 @@ final class MarkdownDocument: NSDocument {
 
     @objc func toggleMode(_ sender: Any?) {
         editorViewController?.toggleMode()
+    }
+
+    @objc func exportPDF(_ sender: Any?) {
+        guard let window = windowControllers.first?.window else { return }
+        PrintController.showExportSheet(for: self, from: window)
     }
 }

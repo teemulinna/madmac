@@ -137,14 +137,21 @@ final class PreferencesViewController: NSViewController {
         // Spell check is handled at WKWebView level, not JS
     }
 
-    /// Apply a JS call to all open editor windows
+    /// Apply a JS call to all open editor windows.
+    /// Supports both direct EditorViewController (legacy) and
+    /// WorkspaceWindowController → NSSplitViewController → EditorViewController path.
     private func applyToAllEditors(_ method: String, value: String) {
         for document in NSDocumentController.shared.documents {
             guard let mdDoc = document as? MarkdownDocument else { continue }
             for wc in mdDoc.windowControllers {
-                guard let vc = wc.contentViewController as? EditorViewController else { continue }
+                let vc: EditorViewController?
+                if let workspaceWC = wc as? WorkspaceWindowController {
+                    vc = workspaceWC.editorViewController
+                } else {
+                    vc = wc.contentViewController as? EditorViewController
+                }
+                guard let vc = vc else { continue }
                 if method == "setThemeFromPrefs" {
-                    // Special: "auto" means follow system
                     if value == "auto" {
                         vc.setThemeAuto(nil)
                     } else {

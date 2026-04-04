@@ -54,6 +54,12 @@ if [ -d "$PROJECT_ROOT/macmd-editor/node_modules/katex/dist/fonts" ]; then
     cp "$PROJECT_ROOT/macmd-editor/node_modules/katex/dist/fonts/"*.woff2 "$RESOURCES/editor/fonts/"
 fi
 
+# Copy PDF export presets
+if [ -d "$PROJECT_ROOT/macmd-app/Resources/presets" ]; then
+    mkdir -p "$RESOURCES/presets"
+    cp "$PROJECT_ROOT/macmd-app/Resources/presets/"*.typ "$RESOURCES/presets/"
+fi
+
 # Copy app icon
 if [ -f "$PROJECT_ROOT/macmd-app/Resources/AppIcon.icns" ]; then
     cp "$PROJECT_ROOT/macmd-app/Resources/AppIcon.icns" "$RESOURCES/AppIcon.icns"

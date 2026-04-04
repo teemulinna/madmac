@@ -226,6 +226,12 @@ func runAllTests() {
     // Roundtrip
     testReadDataRoundtrip()
 
+    // Workspace (WP-2)
+    runWorkspaceTests()
+
+    // Export (Print/PDF)
+    runExportTests()
+
     print("\n===========================================")
     print("Results: \(passed) passed, \(failed) failed, \(total) total")
     print("===========================================")

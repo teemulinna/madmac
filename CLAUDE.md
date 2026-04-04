@@ -34,7 +34,7 @@
 
 - NO Electron — native Swift/AppKit shell
 - NO TextKit 2 — CodeMirror 6 in WKWebView (proven by MarkEdit)
-- NO split panes — Fluid Mode inline WYSIWYG only
+- NO split-pane PREVIEW — Fluid Mode inline WYSIWYG only (sidebar for workspace navigation is OK)
 - pulldown-cmark for streaming parse, comrak for export AST
 - KaTeX (not MathJax) for synchronous math rendering
 - swift-bridge (not UniFFI) for zero-overhead FFI

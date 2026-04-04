@@ -44,6 +44,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         false
     }
 
+    @objc func openFolder(_ sender: Any?) {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = false
+        panel.message = "Choose a folder to browse markdown files"
+        panel.prompt = "Open Folder"
+
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+
+        // Find the frontmost WorkspaceWindowController and set its sidebar root
+        guard let window = NSApp.mainWindow,
+              let workspaceWC = window.windowController as? WorkspaceWindowController else { return }
+        workspaceWC.sidebarViewController.setFileBrowserRoot(url)
+    }
+
     private var preferencesWindow: NSWindow?
 
     @objc func showPreferences(_ sender: Any?) {
@@ -86,11 +102,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let fileMenu = NSMenu(title: "File")
         fileMenu.addItem(withTitle: "New", action: #selector(NSDocumentController.newDocument(_:)), keyEquivalent: "n")
         fileMenu.addItem(withTitle: "Open…", action: #selector(NSDocumentController.openDocument(_:)), keyEquivalent: "o")
+        let openFolderItem = NSMenuItem(title: "Open Folder…", action: #selector(openFolder(_:)), keyEquivalent: "O")
+        openFolderItem.keyEquivalentModifierMask = [.command, .shift]
+        fileMenu.addItem(openFolderItem)
         fileMenu.addItem(.separator())
         fileMenu.addItem(withTitle: "Close", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
         fileMenu.addItem(.separator())
         fileMenu.addItem(withTitle: "Save", action: #selector(NSDocument.save(_:)), keyEquivalent: "s")
         fileMenu.addItem(withTitle: "Save As…", action: #selector(NSDocument.saveAs(_:)), keyEquivalent: "S")
+        fileMenu.addItem(.separator())
+        fileMenu.addItem(withTitle: "Export PDF…", action: #selector(MarkdownDocument.exportPDF(_:)), keyEquivalent: "p")
         fileMenu.addItem(.separator())
 
         let recentMenuItem = NSMenuItem(title: "Open Recent", action: nil, keyEquivalent: "")
@@ -122,6 +143,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // View menu
         let viewMenuItem = NSMenuItem()
         let viewMenu = NSMenu(title: "View")
+
+        let toggleSidebarItem = NSMenuItem(title: "Toggle Sidebar", action: #selector(NSSplitViewController.toggleSidebar(_:)), keyEquivalent: "b")
+        toggleSidebarItem.keyEquivalentModifierMask = [.command]
+        viewMenu.addItem(toggleSidebarItem)
+        viewMenu.addItem(.separator())
 
         let toggleModeItem = NSMenuItem(title: "Toggle Edit Mode", action: #selector(MarkdownDocument.toggleMode(_:)), keyEquivalent: "e")
         toggleModeItem.keyEquivalentModifierMask = [.command]
