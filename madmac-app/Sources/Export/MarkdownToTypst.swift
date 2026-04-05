@@ -124,14 +124,17 @@ enum MarkdownToTypst {
         result = result.replacingOccurrences(
             of: #"~~(.+?)~~"#, with: "#strike[$1]", options: .regularExpression)
 
-        // Italic first: *text* (single) → _text_
-        // Must run BEFORE bold so we can distinguish ** from *
+        // Bold: **text** → placeholder, then italic, then restore bold
+        // Using \u{FFFE} as temporary bold marker to avoid italic regex matching it
         result = result.replacingOccurrences(
-            of: #"(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)"#, with: "_$1_", options: .regularExpression)
+            of: #"\*\*(.+?)\*\*"#, with: "\u{FFFE}$1\u{FFFE}", options: .regularExpression)
 
-        // Bold: **text** → *text* (Typst bold syntax)
+        // Italic: *text* (single) → _text_
         result = result.replacingOccurrences(
-            of: #"\*\*(.+?)\*\*"#, with: "*$1*", options: .regularExpression)
+            of: #"\*(.+?)\*"#, with: "_$1_", options: .regularExpression)
+
+        // Restore bold: placeholder → *text* (Typst bold syntax)
+        result = result.replacingOccurrences(of: "\u{FFFE}", with: "*")
 
         return result
     }

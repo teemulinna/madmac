@@ -1,8 +1,8 @@
 {
-  "name": "macmd-editor",
-  "version": "0.1.0",
+  "name": "madmac-editor",
+  "version": "0.2.0",
   "private": true,
-  "description": "CodeMirror 6 editor extensions for macmd",
+  "description": "CodeMirror 6 editor extensions for MadMac",
   "type": "module",
   "scripts": {
     "build": "rollup -c",
