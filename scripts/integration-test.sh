@@ -569,7 +569,7 @@ bold ""
 dim "  Scenario: Autosave is enabled in document class"
 
 # We verify the Swift source declares autosavesInPlace = true
-SWIFT_DOC="$PROJECT_ROOT/MadMac-app/Sources/Document/MarkdownDocument.swift"
+SWIFT_DOC="$PROJECT_ROOT/madmac-app/Sources/Document/MarkdownDocument.swift"
 assert_file_contains "autosavesInPlace is true" "$SWIFT_DOC" "autosavesInPlace.*true"
 bold ""
 
@@ -640,7 +640,7 @@ bold ""
 dim "  Scenario: App respects system theme without crashing"
 
 # Verify the theme observation code exists in the source
-EDITOR_VC="$PROJECT_ROOT/MadMac-app/Sources/Editor/EditorViewController.swift"
+EDITOR_VC="$PROJECT_ROOT/madmac-app/Sources/Editor/EditorViewController.swift"
 assert_file_contains "System theme detection exists" "$EDITOR_VC" "darkAqua"
 assert_file_contains "Theme JS bridge exists" "$EDITOR_VC" "setTheme"
 assert "App stable with theme system" kill -0 "$MACMD_PID"

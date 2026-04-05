@@ -8,7 +8,7 @@ OUT_BINARY="${TEST_DIR}/run-tests"
 echo "Building Swift document model tests..."
 
 # Exclude MacmdApp.swift — test binary has its own @main in DocumentModelTests.swift
-SWIFT_SOURCES=$(find "${REPO_ROOT}/madmac-app/Sources" -name '*.swift' -type f | grep -v 'MacmdApp.swift')
+SWIFT_SOURCES=$(find "${REPO_ROOT}/madmac-app/Sources" -name '*.swift' -type f | grep -v 'MadMacApp.swift')
 TEST_SOURCES=$(find "${TEST_DIR}" -name '*.swift' -type f)
 
 swiftc \

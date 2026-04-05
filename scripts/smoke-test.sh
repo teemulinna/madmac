@@ -1,12 +1,12 @@
 #!/bin/bash
 set -euo pipefail
 
-# macmd Smoke Test — tests the ACTUAL app, not jsdom abstractions
+# MadMac Smoke Test — tests the ACTUAL app, not jsdom abstractions
 # This is the real test: build → launch → open file → verify
 
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-APP="$PROJECT_ROOT/build/macmd.app"
-BINARY="$APP/Contents/MacOS/macmd"
+APP="$PROJECT_ROOT/build/MadMac.app"
+BINARY="$APP/Contents/MacOS/MadMac"
 TEST_DIR="$PROJECT_ROOT/test-files"
 PASS=0
 FAIL=0
@@ -44,7 +44,7 @@ assert_contains() {
 }
 
 cleanup() {
-    # Kill any macmd instances we started
+    # Kill any MadMac instances we started
     if [ -n "${MACMD_PID:-}" ]; then
         kill "$MACMD_PID" 2>/dev/null || true
         wait "$MACMD_PID" 2>/dev/null || true
@@ -53,7 +53,7 @@ cleanup() {
 trap cleanup EXIT
 
 # ── 0. Build ──────────────────────────────────────
-bold "=== Building macmd ==="
+bold "=== Building MadMac ==="
 "$PROJECT_ROOT/scripts/build.sh" >/dev/null 2>&1
 green "  Build complete"
 
@@ -71,14 +71,14 @@ assert "editor.js is >1MB (real CM6 bundle, not stub)" test "$(wc -c < "$APP/Con
 PLIST_CONTENT=$(/usr/libexec/PlistBuddy -c "Print" "$APP/Contents/Info.plist" 2>&1 || true)
 assert_contains "Info.plist has NSDocumentClass" "$PLIST_CONTENT" "MarkdownDocument"
 assert_contains "Info.plist has UTType identifier" "$PLIST_CONTENT" "net.daringfireball.markdown"
-assert_contains "Info.plist has CFBundleExecutable=macmd" "$PLIST_CONTENT" "CFBundleExecutable"
+assert_contains "Info.plist has CFBundleExecutable=MadMac" "$PLIST_CONTENT" "CFBundleExecutable"
 
 # ── 2. App launch ─────────────────────────────────
 bold ""
 bold "=== 2. App Launch ==="
 
 # Kill any existing instances
-pkill -x macmd 2>/dev/null || true
+pkill -x MadMac 2>/dev/null || true
 sleep 1
 
 # Launch the app binary directly (not via open) to capture stderr

@@ -4,7 +4,7 @@ import { Extension } from "@codemirror/state";
 /**
  * WKWebView bridge for communication between the CM6 editor and Swift shell.
  *
- * JS -> Swift: window.webkit.messageHandlers.macmd.postMessage(payload)
+ * JS -> Swift: window.webkit.messageHandlers.MadMac.postMessage(payload)
  * Swift -> JS: MacmdEditor.createEditor(), .setContent(), .getContent(), etc.
  */
 
@@ -13,7 +13,7 @@ interface WebKitMessageHandler {
 }
 
 interface WebKitMessageHandlers {
-  macmd: WebKitMessageHandler;
+  MadMac: WebKitMessageHandler;
 }
 
 interface WebKitNamespace {
@@ -34,9 +34,9 @@ export function postToSwift(type: string, payload?: Record<string, unknown>): vo
   try {
     if (
       typeof window !== "undefined" &&
-      window.webkit?.messageHandlers?.macmd
+      window.webkit?.messageHandlers?.MadMac
     ) {
-      window.webkit.messageHandlers.macmd.postMessage({ type, ...payload });
+      window.webkit.messageHandlers.MadMac.postMessage({ type, ...payload });
     }
   } catch {
     // Silently ignore — not in WKWebView
