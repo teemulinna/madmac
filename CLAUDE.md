@@ -14,10 +14,10 @@
 ## File Organization
 
 - NEVER save to root folder — use the directories below
-- `macmd-app/` — Swift/AppKit application shell
-- `macmd-core/` — Rust core library (markdown, diagrams, cache, export)
-- `macmd-editor/` — CodeMirror 6 extensions (TypeScript)
-- `macmd-tests/` — Test suites (BDD features, Swift, Rust, TS tests)
+- `madmac-app/` — Swift/AppKit application shell
+- `madmac-core/` — Rust core library (markdown, diagrams, cache, export)
+- `madmac-editor/` — CodeMirror 6 extensions (TypeScript)
+- `madmac-tests/` — Test suites (BDD features, Swift, Rust, TS tests)
 
 ## Project Architecture
 
@@ -52,17 +52,17 @@
 
 ```bash
 # Rust core
-cd macmd-core && cargo build && cargo test
+cd madmac-core && cargo build && cargo test
 
 # TypeScript CM6 extensions
-cd macmd-editor && npm run build && npx vitest run
+cd madmac-editor && npm run build && npx vitest run
 
 # Swift app
-xcodebuild build -scheme macmd
-xcodebuild test -scheme macmd
+xcodebuild build -scheme madmac
+xcodebuild test -scheme madmac
 
 # BDD acceptance tests
-cd macmd-tests && npm run test:bdd
+cd madmac-tests && npm run test:bdd
 
 # All tests
 make test

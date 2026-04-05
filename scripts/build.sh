@@ -14,16 +14,16 @@ RESOURCES="$CONTENTS/Resources"
 echo "==> Building MadMac..."
 
 # 1. Build CM6 editor bundle (if not already built)
-EDITOR_JS="$PROJECT_ROOT/macmd-app/Resources/editor/editor.js"
-if [ ! -f "$EDITOR_JS" ] || [ "$EDITOR_JS" -ot "$PROJECT_ROOT/macmd-editor/src/editor.ts" ]; then
+EDITOR_JS="$PROJECT_ROOT/madmac-app/Resources/editor/editor.js"
+if [ ! -f "$EDITOR_JS" ] || [ "$EDITOR_JS" -ot "$PROJECT_ROOT/madmac-editor/src/editor.ts" ]; then
     echo "  -> Building CM6 editor bundle..."
-    cd "$PROJECT_ROOT/macmd-editor"
+    cd "$PROJECT_ROOT/madmac-editor"
     npm run build
 fi
 
 # 2. Compile Swift sources
 echo "  -> Compiling Swift..."
-SWIFT_FILES=$(find "$PROJECT_ROOT/macmd-app/Sources" -name '*.swift' -type f)
+SWIFT_FILES=$(find "$PROJECT_ROOT/madmac-app/Sources" -name '*.swift' -type f)
 mkdir -p "$MACOS"
 
 swiftc \
@@ -41,28 +41,28 @@ echo "  -> Creating app bundle..."
 mkdir -p "$RESOURCES/editor"
 
 # Copy Info.plist
-cp "$PROJECT_ROOT/macmd-app/Info.plist" "$CONTENTS/Info.plist"
+cp "$PROJECT_ROOT/madmac-app/Info.plist" "$CONTENTS/Info.plist"
 
 # Copy editor resources
-cp "$PROJECT_ROOT/macmd-app/Resources/editor/editor.js" "$RESOURCES/editor/editor.js"
-[ -f "$PROJECT_ROOT/macmd-app/Resources/editor/editor.js.map" ] && \
-    cp "$PROJECT_ROOT/macmd-app/Resources/editor/editor.js.map" "$RESOURCES/editor/editor.js.map"
+cp "$PROJECT_ROOT/madmac-app/Resources/editor/editor.js" "$RESOURCES/editor/editor.js"
+[ -f "$PROJECT_ROOT/madmac-app/Resources/editor/editor.js.map" ] && \
+    cp "$PROJECT_ROOT/madmac-app/Resources/editor/editor.js.map" "$RESOURCES/editor/editor.js.map"
 
 # Copy KaTeX fonts (required for math rendering)
-if [ -d "$PROJECT_ROOT/macmd-editor/node_modules/katex/dist/fonts" ]; then
+if [ -d "$PROJECT_ROOT/madmac-editor/node_modules/katex/dist/fonts" ]; then
     mkdir -p "$RESOURCES/editor/fonts"
-    cp "$PROJECT_ROOT/macmd-editor/node_modules/katex/dist/fonts/"*.woff2 "$RESOURCES/editor/fonts/"
+    cp "$PROJECT_ROOT/madmac-editor/node_modules/katex/dist/fonts/"*.woff2 "$RESOURCES/editor/fonts/"
 fi
 
 # Copy PDF export presets
-if [ -d "$PROJECT_ROOT/macmd-app/Resources/presets" ]; then
+if [ -d "$PROJECT_ROOT/madmac-app/Resources/presets" ]; then
     mkdir -p "$RESOURCES/presets"
-    cp "$PROJECT_ROOT/macmd-app/Resources/presets/"*.typ "$RESOURCES/presets/"
+    cp "$PROJECT_ROOT/madmac-app/Resources/presets/"*.typ "$RESOURCES/presets/"
 fi
 
 # Copy app icon
-if [ -f "$PROJECT_ROOT/macmd-app/Resources/AppIcon.icns" ]; then
-    cp "$PROJECT_ROOT/macmd-app/Resources/AppIcon.icns" "$RESOURCES/AppIcon.icns"
+if [ -f "$PROJECT_ROOT/madmac-app/Resources/AppIcon.icns" ]; then
+    cp "$PROJECT_ROOT/madmac-app/Resources/AppIcon.icns" "$RESOURCES/AppIcon.icns"
 fi
 
 # 4. Create PkgInfo

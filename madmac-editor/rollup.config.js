@@ -36,7 +36,7 @@ const katexCssInjector = `
 export default {
   input: "src/index.ts",
   output: {
-    file: "../macmd-app/Resources/editor/editor.js",
+    file: "../madmac-app/Resources/editor/editor.js",
     format: "iife",
     name: "MacmdEditor",
     sourcemap: true,
