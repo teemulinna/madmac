@@ -119,13 +119,30 @@ export function renderMarkdownToHTML(markdown: string): string {
  * but with macmd's own personality.
  */
 export const READING_MODE_CSS = `
+  /* Unified zoom: --md-zoom drives text, headings, code, AND SVG diagrams.
+     Default 1.0 = 100%. Set via MacmdEditor.setZoom() from Swift Cmd+/-/0. */
+  :root { --md-zoom: 1; }
+
   .reading-mode {
     padding: 32px 48px;
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
-    font-size: 16px;
+    font-size: calc(16px * var(--md-zoom));
     line-height: 1.7;
     color: var(--text-primary);
   }
+
+  /* SVG diagrams (Mermaid) — CSS zoom property scales element AND its layout box.
+     Supported in WebKit/Chrome/Edge. The cleanest way to scale fixed-dimension
+     elements like Mermaid SVGs while preserving page flow. */
+  .reading-mode .mermaid-diagram,
+  .reading-mode .mermaid-diagram svg,
+  .reading-mode svg.mermaid {
+    zoom: var(--md-zoom);
+  }
+
+  /* KaTeX math (inline + display): font-size scales because we're inside
+     .reading-mode which already has calc(16px * --md-zoom). KaTeX uses em-units
+     internally so it scales automatically. No override needed. */
 
   :root {
     --text-primary: #1d1d1f;

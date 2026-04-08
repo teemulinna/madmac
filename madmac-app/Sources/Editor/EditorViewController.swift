@@ -29,16 +29,32 @@ final class EditorViewController: NSViewController, WKScriptMessageHandler {
 
     // MARK: - Zoom
 
+    /// Current zoom level (1.0 = 100%). Drives the unified --md-zoom CSS variable
+    /// in reading mode, scaling text, headings, code, Mermaid diagrams, and KaTeX
+    /// math from a single source of truth.
+    private var currentZoom: Double = {
+        let saved = UserDefaults.standard.double(forKey: "MadMac.zoom")
+        return saved > 0 ? saved : 1.0
+    }()
+
     @objc func zoomIn(_ sender: Any?) {
-        webView.pageZoom = min(webView.pageZoom + 0.1, 3.0)
+        currentZoom = min(currentZoom + 0.1, 3.0)
+        applyZoom()
     }
 
     @objc func zoomOut(_ sender: Any?) {
-        webView.pageZoom = max(webView.pageZoom - 0.1, 0.5)
+        currentZoom = max(currentZoom - 0.1, 0.5)
+        applyZoom()
     }
 
     @objc func resetZoom(_ sender: Any?) {
-        webView.pageZoom = 1.0
+        currentZoom = 1.0
+        applyZoom()
+    }
+
+    private func applyZoom() {
+        webView.evaluateJavaScript("MacmdEditor.setZoom(\(currentZoom));")
+        UserDefaults.standard.set(currentZoom, forKey: "MadMac.zoom")
     }
 
     // MARK: - Theme
@@ -167,6 +183,10 @@ final class EditorViewController: NSViewController, WKScriptMessageHandler {
                 if UserDefaults.standard.bool(forKey: "MadMac.lineNumbers") {
                     self.lineNumbersVisible = true
                     self.webView.evaluateJavaScript("MacmdEditor.showLineNumbers(true);")
+                }
+                // Apply persisted zoom level
+                if self.currentZoom != 1.0 {
+                    self.webView.evaluateJavaScript("MacmdEditor.setZoom(\(self.currentZoom));")
                 }
                 // New file → edit mode
                 if self.shouldStartInEditMode {

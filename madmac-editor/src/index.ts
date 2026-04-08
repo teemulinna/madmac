@@ -9,6 +9,9 @@ export {
   getView,
   setFontSize,
   getFontSize,
+  setZoom,
+  getZoom,
+  resetZoom,
   showLineNumbers,
   copySelectionAsRichText,
 } from "./editor";

@@ -11,6 +11,9 @@ import {
   setFontSize,
   getFontSize,
   showLineNumbers,
+  setZoom,
+  getZoom,
+  resetZoom,
 } from "./editor";
 import type { EditorMode } from "./editor";
 import type { ThemeVariant } from "./theme";
@@ -276,7 +279,7 @@ describe("Bridge message posting", () => {
     postMessageSpy = vi.fn();
     (window as Record<string, unknown>).webkit = {
       messageHandlers: {
-        macmd: { postMessage: postMessageSpy },
+        MadMac: { postMessage: postMessageSpy },
       },
     };
   });
@@ -476,6 +479,86 @@ describe("Font size", () => {
     view = createEditor(parent, "# Keep this", "fluid");
     setFontSize(20);
     expect(getContent()).toBe("# Keep this");
+  });
+});
+
+// ---- NEW TESTS: Unified zoom (text + diagrams + math) ----
+
+describe("Unified zoom", () => {
+  let parent: HTMLElement;
+  let view: EditorView;
+
+  beforeEach(() => {
+    parent = document.createElement("div");
+    document.body.appendChild(parent);
+    // Reset zoom before each test (module state)
+    resetZoom();
+    document.documentElement.style.removeProperty("--md-zoom");
+  });
+
+  afterEach(() => {
+    view?.destroy();
+    parent.remove();
+    document.documentElement.style.removeProperty("--md-zoom");
+  });
+
+  it("setZoom sets --md-zoom CSS custom property on document root", () => {
+    view = createEditor(parent, "test", "reading");
+    setZoom(1.5);
+    const zoomValue = document.documentElement.style.getPropertyValue("--md-zoom");
+    expect(zoomValue).toBe("1.5");
+  });
+
+  it("getZoom returns the current zoom level", () => {
+    view = createEditor(parent, "test", "reading");
+    setZoom(2.0);
+    expect(getZoom()).toBe(2.0);
+  });
+
+  it("getZoom returns 1.0 by default", () => {
+    view = createEditor(parent, "test", "reading");
+    expect(getZoom()).toBe(1.0);
+  });
+
+  it("resetZoom returns to 1.0", () => {
+    view = createEditor(parent, "test", "reading");
+    setZoom(2.5);
+    resetZoom();
+    expect(getZoom()).toBe(1.0);
+    expect(document.documentElement.style.getPropertyValue("--md-zoom")).toBe("1");
+  });
+
+  it("clamps minimum to 0.5", () => {
+    view = createEditor(parent, "test", "reading");
+    setZoom(0.1);
+    expect(getZoom()).toBeGreaterThanOrEqual(0.5);
+  });
+
+  it("clamps maximum to 3.0", () => {
+    view = createEditor(parent, "test", "reading");
+    setZoom(5.0);
+    expect(getZoom()).toBeLessThanOrEqual(3.0);
+  });
+
+  it("zoom does not affect content", () => {
+    view = createEditor(parent, "# Original content", "reading");
+    setZoom(1.5);
+    expect(getContent()).toBe("# Original content");
+  });
+
+  it("zoom level 1.0 means 100%", () => {
+    view = createEditor(parent, "test", "reading");
+    setZoom(1.0);
+    expect(getZoom()).toBe(1.0);
+  });
+
+  it("multiple zoom changes track correctly", () => {
+    view = createEditor(parent, "test", "reading");
+    setZoom(1.2);
+    setZoom(1.4);
+    setZoom(2.0);
+    expect(getZoom()).toBe(2.0);
+    expect(document.documentElement.style.getPropertyValue("--md-zoom")).toBe("2");
   });
 });
 

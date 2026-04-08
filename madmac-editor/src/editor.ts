@@ -378,6 +378,33 @@ export function getFontSize(): number {
   return currentFontSize;
 }
 
+// ---- Unified zoom (text + diagrams + math) ----
+
+let currentZoom = 1.0;
+
+/**
+ * Set the unified viewer zoom level.
+ * Drives a CSS custom property `--md-zoom` on document root.
+ * Reading-mode CSS uses calc() to scale text, code, headings, and SVG diagrams
+ * (Mermaid, KaTeX) all proportionally from this single source of truth.
+ *
+ * Range: 0.5 (50%) to 3.0 (300%). Values outside are clamped.
+ */
+export function setZoom(level: number): void {
+  currentZoom = Math.max(0.5, Math.min(3.0, level));
+  if (typeof document !== "undefined") {
+    document.documentElement.style.setProperty("--md-zoom", String(currentZoom));
+  }
+}
+
+export function getZoom(): number {
+  return currentZoom;
+}
+
+export function resetZoom(): void {
+  setZoom(1.0);
+}
+
 export function showLineNumbers(show: boolean): void {
   if (!view) return;
   view.dispatch({
