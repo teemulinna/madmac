@@ -6,34 +6,97 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         checkForUpdates()
     }
 
-    private func checkForUpdates() {
-        guard let url = URL(string: "https://api.github.com/repos/teemulinna/MadMac/releases/latest") else { return }
-        let current = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0"
+    private func checkForUpdates(userInitiated: Bool = false) {
+        guard let url = URL(string: "https://api.github.com/repos/teemulinna/madmac/releases/latest") else { return }
+        let current = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0")
+            .trimmingCharacters(in: CharacterSet(charactersIn: "v "))
 
         URLSession.shared.dataTask(with: url) { data, _, _ in
             guard let data = data,
                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let tagName = json["tag_name"] as? String,
-                  let htmlUrl = json["html_url"] as? String else { return }
-
-            let latest = tagName.replacingOccurrences(of: "v", with: "")
-            guard latest.compare(current, options: .numeric) == .orderedDescending else { return }
-
-            DispatchQueue.main.async {
-                let alert = NSAlert()
-                alert.messageText = "Update Available"
-                alert.informativeText = "MadMac v\(latest) is available (you have v\(current))."
-                alert.addButton(withTitle: "Download")
-                alert.addButton(withTitle: "Later")
-                alert.alertStyle = .informational
-
-                if alert.runModal() == .alertFirstButtonReturn {
-                    if let releaseURL = URL(string: htmlUrl) {
-                        NSWorkspace.shared.open(releaseURL)
+                  let htmlUrl = json["html_url"] as? String else {
+                if userInitiated {
+                    DispatchQueue.main.async {
+                        let alert = NSAlert()
+                        alert.messageText = "Update Check Failed"
+                        alert.informativeText = "Could not reach GitHub to check for updates."
+                        alert.alertStyle = .warning
+                        alert.runModal()
                     }
+                }
+                return
+            }
+
+            let latest = tagName.hasPrefix("v") ? String(tagName.dropFirst()) : tagName
+            NSLog("MadMac: update check — current=\(current) latest=\(latest)")
+
+            let comparison = latest.compare(current, options: .numeric)
+            if comparison == .orderedDescending {
+                DispatchQueue.main.async {
+                    self.presentUpdateAlert(latest: latest, current: current, releaseURL: htmlUrl)
+                }
+            } else if userInitiated {
+                DispatchQueue.main.async {
+                    let alert = NSAlert()
+                    alert.messageText = "You're Up to Date"
+                    alert.informativeText = "MadMac \(current) is the latest version."
+                    alert.alertStyle = .informational
+                    alert.runModal()
                 }
             }
         }.resume()
+    }
+
+    @objc func checkForUpdatesMenuItem(_ sender: Any?) {
+        checkForUpdates(userInitiated: true)
+    }
+
+    /// Whether MadMac was installed via Homebrew Cask.
+    /// Detected by checking if the bundle lives under a Caskroom directory.
+    private var isInstalledViaBrew: Bool {
+        Bundle.main.bundlePath.contains("/Caskroom/")
+    }
+
+    private func presentUpdateAlert(latest: String, current: String, releaseURL: String) {
+        let alert = NSAlert()
+        alert.messageText = "Update Available"
+        alert.informativeText = "MadMac \(latest) is available (you have \(current))."
+        alert.alertStyle = .informational
+
+        if isInstalledViaBrew {
+            alert.addButton(withTitle: "Update Now")
+            alert.addButton(withTitle: "Later")
+            if alert.runModal() == .alertFirstButtonReturn {
+                runBrewUpgradeAndRelaunch()
+            }
+        } else {
+            alert.addButton(withTitle: "Download")
+            alert.addButton(withTitle: "Later")
+            if alert.runModal() == .alertFirstButtonReturn,
+               let url = URL(string: releaseURL) {
+                NSWorkspace.shared.open(url)
+            }
+        }
+    }
+
+    /// Run `brew upgrade --cask madmac` in Terminal.app, then relaunch.
+    /// Brew can't replace a running app bundle, so we quit first.
+    /// The Terminal command quits MadMac, runs brew, then relaunches it.
+    private func runBrewUpgradeAndRelaunch() {
+        let script = """
+        tell application "Terminal"
+            activate
+            do script "osascript -e 'tell application \\"MadMac\\" to quit' && sleep 1 && brew upgrade --cask madmac && open -a MadMac"
+        end tell
+        """
+        if let appleScript = NSAppleScript(source: script) {
+            var error: NSDictionary?
+            appleScript.executeAndReturnError(&error)
+            if let error = error {
+                NSLog("MadMac: AppleScript error: \(error)")
+            }
+        }
     }
 
     func applicationShouldOpenUntitledFile(_ sender: NSApplication) -> Bool {
@@ -90,6 +153,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let appMenuItem = NSMenuItem()
         let appMenu = NSMenu()
         appMenu.addItem(withTitle: "About MadMac", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+        appMenu.addItem(.separator())
+        appMenu.addItem(withTitle: "Check for Updates…", action: #selector(checkForUpdatesMenuItem(_:)), keyEquivalent: "")
         appMenu.addItem(.separator())
         appMenu.addItem(withTitle: "Settings…", action: #selector(showPreferences(_:)), keyEquivalent: ",")
         appMenu.addItem(.separator())
@@ -166,7 +231,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         viewMenu.addItem(themeMenuItem)
 
         viewMenu.addItem(.separator())
-        viewMenu.addItem(withTitle: "Zoom In", action: #selector(EditorViewController.zoomIn(_:)), keyEquivalent: "+")
+        // Cmd+= for Zoom In (the standard — accessible without Shift)
+        let zoomInItem = NSMenuItem(title: "Zoom In", action: #selector(EditorViewController.zoomIn(_:)), keyEquivalent: "=")
+        zoomInItem.keyEquivalentModifierMask = [.command]
+        viewMenu.addItem(zoomInItem)
         viewMenu.addItem(withTitle: "Zoom Out", action: #selector(EditorViewController.zoomOut(_:)), keyEquivalent: "-")
         viewMenu.addItem(withTitle: "Actual Size", action: #selector(EditorViewController.resetZoom(_:)), keyEquivalent: "0")
         viewMenu.addItem(.separator())

@@ -23,8 +23,31 @@ final class EditorViewController: NSViewController, WKScriptMessageHandler {
         webView = WKWebView(frame: NSRect(x: 0, y: 0, width: 1000, height: 700), configuration: config)
         webView.setValue(false, forKey: "drawsBackground")
 
+        // Pinch-to-zoom (trackpad / Magic Mouse), Photos.app style
+        let pinch = NSMagnificationGestureRecognizer(target: self, action: #selector(handlePinch(_:)))
+        webView.addGestureRecognizer(pinch)
+
         view = webView
         loadEditorHTML()
+    }
+
+    // MARK: - Pinch zoom
+
+    private var pinchStartZoom: Double = 1.0
+
+    @objc private func handlePinch(_ gesture: NSMagnificationGestureRecognizer) {
+        switch gesture.state {
+        case .began:
+            pinchStartZoom = currentZoom
+        case .changed:
+            let target = pinchStartZoom * (1.0 + Double(gesture.magnification))
+            currentZoom = max(0.5, min(3.0, target))
+            applyZoom()
+        case .ended, .cancelled:
+            UserDefaults.standard.set(currentZoom, forKey: "MadMac.zoom")
+        default:
+            break
+        }
     }
 
     // MARK: - Zoom

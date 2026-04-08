@@ -17,7 +17,7 @@ const baseTheme = EditorView.baseTheme({
   },
   ".cm-content": {
     padding: "16px 0",
-    caretColor: "transparent",
+    caretColor: "#0a69da",
   },
   ".cm-scroller": {
     overflow: "auto",
@@ -35,7 +35,8 @@ const baseTheme = EditorView.baseTheme({
 const lightTheme = EditorView.theme(
   {
     "&": { backgroundColor: "#ffffff", color: "#24292f" },
-    ".cm-cursor": { borderLeftColor: "#0a69da" },
+    ".cm-content": { caretColor: "#0a69da" },
+    ".cm-cursor, .cm-dropCursor": { borderLeftColor: "#0a69da", borderLeftWidth: "2px" },
     ".cm-selectionBackground, ::selection": { backgroundColor: "#add6ff" },
     ".cm-activeLine": { backgroundColor: "#eaeef27f" },
     ".cm-line": { padding: "0" },
@@ -51,7 +52,8 @@ const lightTheme = EditorView.theme(
 const darkTheme = EditorView.theme(
   {
     "&": { backgroundColor: "#0d1116", color: "#c9d1d9" },
-    ".cm-cursor": { borderLeftColor: "#58a6ff" },
+    ".cm-content": { caretColor: "#58a6ff" },
+    ".cm-cursor, .cm-dropCursor": { borderLeftColor: "#58a6ff", borderLeftWidth: "2px" },
     ".cm-selectionBackground, ::selection": { backgroundColor: "#264f78" },
     ".cm-activeLine": { backgroundColor: "#6e76811a" },
     ".cm-line": { padding: "0" },
@@ -67,7 +69,8 @@ const darkTheme = EditorView.theme(
 const sepiaTheme = EditorView.theme(
   {
     "&": { backgroundColor: "#f5efe6", color: "#3b3228" },
-    ".cm-cursor": { borderLeftColor: "#a0522d" },
+    ".cm-content": { caretColor: "#a0522d" },
+    ".cm-cursor, .cm-dropCursor": { borderLeftColor: "#a0522d", borderLeftWidth: "2px" },
     ".cm-selectionBackground, ::selection": { backgroundColor: "#e8dcc8" },
     ".cm-activeLine": { backgroundColor: "#efe8dc80" },
     ".cm-line": { padding: "0" },

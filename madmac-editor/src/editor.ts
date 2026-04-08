@@ -168,6 +168,9 @@ async function processMermaidInHTML(parent: HTMLElement): Promise<void> {
       // Leave code block as-is on error
     }
   }
+
+  // Apply current zoom to newly rendered SVGs
+  applyZoomToMermaidSvgs();
 }
 
 function processKaTeXInHTML(parent: HTMLElement): void {
@@ -384,9 +387,10 @@ let currentZoom = 1.0;
 
 /**
  * Set the unified viewer zoom level.
- * Drives a CSS custom property `--md-zoom` on document root.
- * Reading-mode CSS uses calc() to scale text, code, headings, and SVG diagrams
- * (Mermaid, KaTeX) all proportionally from this single source of truth.
+ * Drives:
+ *  1. --md-zoom CSS custom property → text, headings, code (via calc + em)
+ *  2. KaTeX math (inherits from font-size in em units)
+ *  3. Mermaid SVGs — width set directly via JS (CSS zoom unreliable on SVG in WebKit)
  *
  * Range: 0.5 (50%) to 3.0 (300%). Values outside are clamped.
  */
@@ -394,6 +398,9 @@ export function setZoom(level: number): void {
   currentZoom = Math.max(0.5, Math.min(3.0, level));
   if (typeof document !== "undefined") {
     document.documentElement.style.setProperty("--md-zoom", String(currentZoom));
+    const svgCount = applyZoomToMermaidSvgs();
+    // Diagnostic: log via console (visible in Web Inspector)
+    console.log(`[MadMac] setZoom(${currentZoom}) — scaled ${svgCount} mermaid SVG(s)`);
   }
 }
 
@@ -403,6 +410,67 @@ export function getZoom(): number {
 
 export function resetZoom(): void {
   setZoom(1.0);
+}
+
+/**
+ * Scale all Mermaid SVGs to the current zoom level.
+ * Mermaid renders SVGs with explicit width/height. CSS zoom is unreliable on
+ * SVG in WebKit, so we set the width attribute directly. The viewBox preserves
+ * the aspect ratio so text inside the SVG scales proportionally too.
+ */
+function applyZoomToMermaidSvgs(): number {
+  const svgs = document.querySelectorAll<SVGSVGElement>(
+    '.mermaid-diagram svg, svg[id^="mermaid-"]',
+  );
+  svgs.forEach((svg) => {
+    // Capture intrinsic width on first encounter.
+    // Priority order: viewBox (intrinsic) → width attr (if numeric px) → bounding rect.
+    // Mermaid's style.maxWidth is often "100%" — useless for our purposes.
+    if (!svg.dataset.originalWidth) {
+      let naturalWidth = NaN;
+
+      // 1. Try viewBox — most reliable, gives intrinsic dimensions
+      const viewBox = svg.getAttribute("viewBox");
+      if (viewBox) {
+        const parts = viewBox.trim().split(/\s+/).map(parseFloat);
+        if (parts.length === 4 && !isNaN(parts[2]) && parts[2] > 0) {
+          naturalWidth = parts[2];
+        }
+      }
+
+      // 2. Try width attribute (only if it's a plain number, not a percentage)
+      if (isNaN(naturalWidth)) {
+        const widthAttr = svg.getAttribute("width");
+        if (widthAttr && !widthAttr.endsWith("%")) {
+          const parsed = parseFloat(widthAttr);
+          if (!isNaN(parsed) && parsed > 10) {
+            naturalWidth = parsed;
+          }
+        }
+      }
+
+      // 3. Last resort: bounding rect (must be in DOM and laid out)
+      if (isNaN(naturalWidth) || naturalWidth <= 10) {
+        const rect = svg.getBoundingClientRect().width;
+        if (rect > 10) {
+          naturalWidth = rect;
+        }
+      }
+
+      if (!isNaN(naturalWidth) && naturalWidth > 0) {
+        svg.dataset.originalWidth = String(naturalWidth);
+      }
+    }
+
+    const natural = parseFloat(svg.dataset.originalWidth || "0");
+    if (natural > 0) {
+      const scaled = natural * currentZoom;
+      svg.style.width = `${scaled}px`;
+      svg.style.height = "auto";
+      svg.style.maxWidth = "none";
+    }
+  });
+  return svgs.length;
 }
 
 export function showLineNumbers(show: boolean): void {

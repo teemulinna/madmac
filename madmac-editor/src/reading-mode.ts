@@ -131,18 +131,18 @@ export const READING_MODE_CSS = `
     color: var(--text-primary);
   }
 
-  /* SVG diagrams (Mermaid) — CSS zoom property scales element AND its layout box.
-     Supported in WebKit/Chrome/Edge. The cleanest way to scale fixed-dimension
-     elements like Mermaid SVGs while preserving page flow. */
-  .reading-mode .mermaid-diagram,
-  .reading-mode .mermaid-diagram svg,
-  .reading-mode svg.mermaid {
-    zoom: var(--md-zoom);
+  /* Mermaid SVG containers — let JS-set inline width control sizing.
+     Override Mermaid's default style="max-width: ..." which interferes with zoom. */
+  .reading-mode .mermaid-diagram {
+    overflow: visible;
+  }
+  .reading-mode .mermaid-diagram svg {
+    max-width: none !important;
+    height: auto !important;
   }
 
-  /* KaTeX math (inline + display): font-size scales because we're inside
-     .reading-mode which already has calc(16px * --md-zoom). KaTeX uses em-units
-     internally so it scales automatically. No override needed. */
+  /* KaTeX math: inherits font-size from .reading-mode which is calc(16px * --md-zoom).
+     Em-based KaTeX internals scale automatically. */
 
   :root {
     --text-primary: #1d1d1f;
