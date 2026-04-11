@@ -6,6 +6,8 @@ import { Extension } from "@codemirror/state";
  *
  * JS -> Swift: window.webkit.messageHandlers.MadMac.postMessage(payload)
  * Swift -> JS: MacmdEditor.createEditor(), .setContent(), .getContent(), etc.
+ *
+ * Messages use { action: "...", ... } format to match Swift's expectation.
  */
 
 interface WebKitMessageHandler {
@@ -28,15 +30,16 @@ declare global {
 
 /**
  * Send a message to the Swift shell via WKWebView message handler.
+ * Uses "action" key to match Swift's WKScriptMessageHandler parsing.
  * No-ops silently if not running inside WKWebView.
  */
-export function postToSwift(type: string, payload?: Record<string, unknown>): void {
+export function postToSwift(action: string, payload?: Record<string, unknown>): void {
   try {
     if (
       typeof window !== "undefined" &&
       window.webkit?.messageHandlers?.MadMac
     ) {
-      window.webkit.messageHandlers.MadMac.postMessage({ type, ...payload });
+      window.webkit.messageHandlers.MadMac.postMessage({ action, ...payload });
     }
   } catch {
     // Silently ignore — not in WKWebView
@@ -45,16 +48,13 @@ export function postToSwift(type: string, payload?: Record<string, unknown>): vo
 
 /**
  * CM6 extension that notifies Swift whenever the document content changes.
- * Dispatches "contentChanged" with the new content length.
+ * Sends the FULL content text so Swift can update document.content for save.
  */
 export function contentChangeNotifier(): Extension {
   return EditorView.updateListener.of((update) => {
     if (update.docChanged) {
       const content = update.state.doc.toString();
-      postToSwift("contentChanged", {
-        length: content.length,
-        lineCount: update.state.doc.lines,
-      });
+      postToSwift("contentChanged", { content });
     }
   });
 }
@@ -63,7 +63,7 @@ export function contentChangeNotifier(): Extension {
  * Notify Swift that the editor is ready.
  */
 export function notifyReady(): void {
-  postToSwift("editorReady");
+  postToSwift("ready");
 }
 
 /**

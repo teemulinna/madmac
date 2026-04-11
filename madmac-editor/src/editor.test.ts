@@ -295,7 +295,7 @@ describe("Bridge message posting", () => {
   it("sends editorReady on creation", () => {
     view = createEditor(parent, "# Hello", "reading", "light");
     expect(postMessageSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "editorReady" }),
+      expect.objectContaining({ action: "ready" }),
     );
   });
 
@@ -305,7 +305,7 @@ describe("Bridge message posting", () => {
 
     setContent("updated");
     expect(postMessageSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "contentChanged" }),
+      expect.objectContaining({ action: "contentChanged" }),
     );
   });
 
@@ -315,7 +315,7 @@ describe("Bridge message posting", () => {
 
     setMode("fluid");
     expect(postMessageSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "modeChanged", mode: "fluid" }),
+      expect.objectContaining({ action: "modeChanged", mode: "fluid" }),
     );
   });
 
@@ -325,7 +325,7 @@ describe("Bridge message posting", () => {
 
     setTheme("dark");
     expect(postMessageSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "themeChanged", theme: "dark" }),
+      expect.objectContaining({ action: "themeChanged", theme: "dark" }),
     );
   });
 
