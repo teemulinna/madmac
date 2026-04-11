@@ -14,6 +14,8 @@ export {
   resetZoom,
   showLineNumbers,
   copySelectionAsRichText,
+  KROKI_LANGUAGES,
+  renderKrokiDiagram,
 } from "./editor";
 export type { EditorMode } from "./editor";
 export type { ThemeVariant } from "./theme";

@@ -129,6 +129,7 @@ function renderReadingView(): void {
   const content = view ? view.state.doc.toString() : rawContent;
   readingContainer.innerHTML = renderMarkdownToHTML(content);
   processMermaidInHTML(readingContainer);
+  processKrokiInHTML(readingContainer);
   processKaTeXInHTML(readingContainer);
 }
 
@@ -170,6 +171,81 @@ async function processMermaidInHTML(parent: HTMLElement): Promise<void> {
   }
 
   // Apply current zoom to newly rendered SVGs
+  applyZoomToMermaidSvgs();
+}
+
+// ---- Kroki diagram rendering (PlantUML, Graphviz, D2, etc.) ----
+
+/** Languages supported via Kroki API. Mermaid is handled separately (client-side). */
+export const KROKI_LANGUAGES = [
+  "plantuml", "graphviz", "dot", "d2", "ditaa", "erd",
+  "excalidraw", "nomnoml", "pikchr", "structurizr",
+  "svgbob", "umlet", "vega", "vegalite", "wavedrom",
+  "bytefield", "blockdiag", "seqdiag", "actdiag",
+  "nwdiag", "rackdiag", "packetdiag",
+] as const;
+
+const KROKI_BASE_URL = "https://kroki.io";
+
+/**
+ * Render a diagram via Kroki API.
+ * Returns SVG string on success, null on failure (network error, bad syntax, etc.)
+ */
+export async function renderKrokiDiagram(
+  language: string,
+  source: string,
+): Promise<string | null> {
+  // Map aliases
+  const lang = language === "dot" ? "graphviz" : language;
+  try {
+    const response = await fetch(`${KROKI_BASE_URL}/${lang}/svg`, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: source,
+    });
+    if (!response.ok) return null;
+    return await response.text();
+  } catch {
+    return null;
+  }
+}
+
+/** Process Kroki-supported code blocks in reading-mode HTML. */
+async function processKrokiInHTML(parent: HTMLElement): Promise<void> {
+  const krokiSet = new Set<string>(KROKI_LANGUAGES);
+  const codeBlocks = parent.querySelectorAll("code[class*='language-']");
+
+  for (let i = 0; i < codeBlocks.length; i++) {
+    const code = codeBlocks[i];
+    const classMatch = code.className.match(/language-(\S+)/);
+    if (!classMatch) continue;
+    const lang = classMatch[1].toLowerCase();
+    if (!krokiSet.has(lang)) continue;
+
+    const pre = code.parentElement;
+    const wrapper = pre?.parentElement;
+    if (!wrapper) continue;
+
+    const source = code.textContent || "";
+    const svg = await renderKrokiDiagram(lang, source);
+
+    if (svg) {
+      const container = document.createElement("div");
+      container.className = "kroki-diagram mermaid-diagram"; // reuse mermaid-diagram class for zoom
+      container.style.textAlign = "center";
+      container.style.margin = "1em 0";
+      container.innerHTML = svg;
+      wrapper.replaceWith(container);
+    } else {
+      // Show a subtle offline/error hint below the code block
+      const hint = document.createElement("div");
+      hint.style.cssText = "font-size: 12px; color: #999; text-align: center; padding: 4px;";
+      hint.textContent = "Diagram rendering requires internet connection";
+      wrapper.appendChild(hint);
+    }
+  }
+
+  // Apply zoom to newly rendered Kroki SVGs
   applyZoomToMermaidSvgs();
 }
 

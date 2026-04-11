@@ -14,6 +14,8 @@ import {
   setZoom,
   getZoom,
   resetZoom,
+  KROKI_LANGUAGES,
+  renderKrokiDiagram,
 } from "./editor";
 import type { EditorMode } from "./editor";
 import type { ThemeVariant } from "./theme";
@@ -559,6 +561,86 @@ describe("Unified zoom", () => {
     setZoom(2.0);
     expect(getZoom()).toBe(2.0);
     expect(document.documentElement.style.getPropertyValue("--md-zoom")).toBe("2");
+  });
+});
+
+// ---- NEW TESTS: Kroki diagram rendering ----
+
+describe("Kroki diagram rendering", () => {
+  let parent: HTMLElement;
+  let view: EditorView;
+  const originalFetch = globalThis.fetch;
+
+  beforeEach(() => {
+    parent = document.createElement("div");
+    document.body.appendChild(parent);
+  });
+
+  afterEach(() => {
+    view?.destroy();
+    parent.remove();
+    globalThis.fetch = originalFetch;
+  });
+
+  it("KROKI_LANGUAGES contains plantuml, graphviz, d2", () => {
+    expect(KROKI_LANGUAGES).toContain("plantuml");
+    expect(KROKI_LANGUAGES).toContain("graphviz");
+    expect(KROKI_LANGUAGES).toContain("d2");
+  });
+
+  it("KROKI_LANGUAGES does not contain mermaid (handled separately)", () => {
+    expect(KROKI_LANGUAGES).not.toContain("mermaid");
+  });
+
+  it("KROKI_LANGUAGES does not contain general languages like python", () => {
+    expect(KROKI_LANGUAGES).not.toContain("python");
+    expect(KROKI_LANGUAGES).not.toContain("javascript");
+  });
+
+  it("renderKrokiDiagram returns SVG on success", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      text: () => Promise.resolve('<svg viewBox="0 0 100 100"><text>Test</text></svg>'),
+    });
+
+    const svg = await renderKrokiDiagram("plantuml", "@startuml\nA -> B\n@enduml");
+    expect(svg).toContain("<svg");
+    expect(svg).toContain("Test");
+  });
+
+  it("renderKrokiDiagram returns null on fetch error", async () => {
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error("network down"));
+
+    const svg = await renderKrokiDiagram("plantuml", "@startuml\nA -> B\n@enduml");
+    expect(svg).toBeNull();
+  });
+
+  it("renderKrokiDiagram returns null on non-ok response", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      text: () => Promise.resolve("Bad request"),
+    });
+
+    const svg = await renderKrokiDiagram("plantuml", "invalid source");
+    expect(svg).toBeNull();
+  });
+
+  it("renderKrokiDiagram calls correct Kroki URL", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      text: () => Promise.resolve("<svg></svg>"),
+    });
+    globalThis.fetch = fetchMock;
+
+    await renderKrokiDiagram("graphviz", "digraph { A -> B }");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://kroki.io/graphviz/svg",
+      expect.objectContaining({
+        method: "POST",
+        body: "digraph { A -> B }",
+      }),
+    );
   });
 });
 
